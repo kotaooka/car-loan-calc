@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>自動車ローン返済計算ツール｜残価設定・ボーナス・繰上げ返済</title>
+<meta name="description" content="自動車ローンの毎月の返済額と利息を求める。残価設定（据置）、ボーナス併用、端数の調整、繰上げ返済（期間短縮・返済額軽減）、変動金利の上昇（5年ルール・125%ルール）、銀行・ディーラーの金利の比較にも対応">
+<link rel="canonical" href="https://kotaooka.github.io/car-loan-calc/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="QC Workbench">
+<meta property="og:title" content="自動車ローン返済計算ツール｜残価設定・ボーナス・繰上げ返済">
+<meta property="og:description" content="自動車ローンの毎月の返済額と利息を求める。残価設定（据置）、ボーナス併用、端数の調整、繰上げ返済（期間短縮・返済額軽減）、変動金利の上昇（5年ルール・125%ルール）、銀行・ディーラーの金利の比較にも対応">
+<meta property="og:url" content="https://kotaooka.github.io/car-loan-calc/">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:image" content="https://kotaooka.github.io/car-loan-calc/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="自動車ローン計算機：借入残高が回ごとに減っていく様子を、繰上げ返済の有無で比べた図">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#1d5c96" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#11161b" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="自動車ローン">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<script>
+  // 保存したテーマ（auto / light / dark）を描画前に当てる。キーは QC Workbench の全ツールで共通
+  try { const t = localStorage.getItem("qc-workbench-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) { /* 保存できない環境 */ }
+</script>
+<style>
+/* 字体・配色は QC Workbench の各ツールと共通（DESIGN.md）。レイアウト：左に入力、右に図・結果。狭い画面では縦に積む */
+:root {
+  --bg: #eef1f4;
+  --surface: #ffffff;
+  --ink: #15212c;
+  --ink2: #475563;
+  --muted: #74818e;
+  --line: #d5dce3;
+  --grid: #e4e9ee;
+  --accent: #1d5c96;
+  --accent-ink: #ffffff;
+  --accent-weak: #e1ebf5;
+  --ok: #17703a; --ok-weak: #e2f2e7;
+  --warn: #8a5300; --warn-weak: #f8ecd9;
+  --ng: #ad2a22; --ng-weak: #f8e4e2;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #8c5bd6;
+  --f-ui: "BIZ UDPGothic", "Hiragino Sans", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+  --f-num: "IBM Plex Mono", ui-monospace, "Consolas", monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161b; --surface: #19212a; --ink: #e6ecf2; --ink2: #a9b5c1; --muted: #7d8996;
+    --line: #2b3641; --grid: #253039; --accent: #6ba6df; --accent-ink: #0d1620; --accent-weak: #1c2f43;
+    --ok: #57c483; --ok-weak: #163222; --warn: #e3a84e; --warn-weak: #36280f; --ng: #f07a70; --ng-weak: #3a1c1a;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #a07ae0; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161b; --surface: #19212a; --ink: #e6ecf2; --ink2: #a9b5c1; --muted: #7d8996;
+  --line: #2b3641; --grid: #253039; --accent: #6ba6df; --accent-ink: #0d1620; --accent-weak: #1c2f43;
+  --ok: #57c483; --ok-weak: #163222; --warn: #e3a84e; --warn-weak: #36280f; --ng: #f07a70; --ng-weak: #3a1c1a;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #a07ae0; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-ui); font-size: 15px; line-height: 1.6; text-autospace: normal; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+header.top { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.top-in { max-width: 1080px; margin: 0 auto; padding: 12px 16px; }
+.brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.brand h1 { font-size: 1.15rem; margin: 0; letter-spacing: .02em; }
+.brand .std { font-size: .78rem; color: var(--muted); }
+.brand .home { font-size: .78rem; color: var(--muted); text-decoration: none; margin-right: -6px; }
+.brand .home:hover { color: var(--accent); text-decoration: underline; }
+.brand .crumb { font-size: .78rem; color: var(--muted); margin-right: -6px; }
+.brand .theme { margin-left: auto; }
+nav.tabs { display: flex; gap: 4px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; }
+nav.tabs::-webkit-scrollbar { display: none; }
+nav.tabs button { flex: 0 0 auto; border: 0; background: none; color: var(--ink2); font: inherit; font-size: .92rem; padding: 8px 12px 10px; cursor: pointer; border-bottom: 3px solid transparent; }
+nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 700; }
+nav.tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.privacy { font-size: .8rem; color: var(--ok); margin: 0; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 16px 16px 40px; display: flex; flex-direction: column; gap: 16px; }
+.panel { display: grid; grid-template-columns: minmax(0, 330px) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 760px) { .panel { grid-template-columns: minmax(0, 1fr); } }
+.col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.box h2 { font-size: .95rem; margin: 0; }
+.box h3 { font-size: .85rem; margin: 0; color: var(--ink2); font-weight: 700; }
+.hint { font-size: .8rem; color: var(--muted); margin: 0; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+.fields.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.field.wide { grid-column: 1 / -1; }
+.fields > .hint.wide { grid-column: 1 / -1; margin-top: -4px; }
+.hint.std.ng { color: var(--ng); }
+.field label, .field .lab { font-size: .8rem; color: var(--ink2); }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+input[type="text"], select { width: 100%; font: 500 .95rem var(--f-num); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; }
+select.ui { font-family: var(--f-ui); font-weight: 400; }
+input.bad, select.bad { border-color: var(--ng); background: var(--ng-weak); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { font: inherit; font-size: .85rem; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; flex-wrap: wrap; }
+.seg button { border: 0; background: var(--bg); color: var(--ink2); font: inherit; font-size: .85rem; padding: 6px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.msg { border-radius: 6px; padding: 8px 10px; font-size: .88rem; }
+.msg.err { background: var(--ng-weak); color: var(--ng); }
+.msg.warn { background: var(--warn-weak); color: var(--warn); }
+.msg.ok { background: var(--ok-weak); color: var(--ok); }
+.msg.info { background: var(--accent-weak); color: var(--ink); }
+.msgs { display: flex; flex-direction: column; gap: 6px; }
+.sub { border-top: 1px dashed var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.figure { border: 1px solid var(--line); border-radius: 6px; background: var(--bg); overflow: hidden; }
+.figure svg { display: block; width: 100%; height: auto; user-select: none; -webkit-user-select: none; }
+.figure .pick { cursor: pointer; }
+.figure .pick:hover rect.hit { fill: var(--accent-weak); }
+.kpi { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.kpi div { background: var(--bg); border-radius: 6px; padding: 6px 8px; min-width: 0; }
+.kpi span { display: block; font-size: .72rem; color: var(--ink2); }
+.kpi b { font: 500 1.05rem var(--f-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kpi small { font-size: .72rem; color: var(--muted); }
+.kpi .ng b { color: var(--ng); } .kpi .ok b { color: var(--ok); }
+@media (max-width: 480px) { .kpi { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+table.res { border-collapse: collapse; width: 100%; font-size: .88rem; }
+table.res th { text-align: left; font-weight: 400; color: var(--ink2); padding: 5px 8px 5px 0; vertical-align: top; }
+table.res th small { display: block; color: var(--muted); font-size: .74rem; }
+table.res td { font-family: var(--f-num); font-variant-numeric: tabular-nums; padding: 5px 0 5px 8px; text-align: right; white-space: nowrap; vertical-align: top; }
+table.res td .u { color: var(--muted); font-size: .8rem; margin-left: 3px; }
+table.res thead th { font-size: .78rem; color: var(--muted); text-align: right; padding-bottom: 2px; }
+table.res thead th:first-child { text-align: left; }
+table.res tr + tr { border-top: 1px solid var(--grid); }
+table.res tr.cur { background: var(--accent-weak); }
+.scroll { overflow-x: auto; }
+.judge { display: inline-block; border-radius: 4px; padding: 0 6px; margin-left: 6px; font-family: var(--f-ui); font-size: .8rem; font-weight: 700; }
+.judge.ok { background: var(--ok-weak); color: var(--ok); }
+.judge.ng { background: var(--ng-weak); color: var(--ng); }
+.judge.warn { background: var(--warn-weak); color: var(--warn); }
+.legend { display: flex; gap: 14px; font-size: .78rem; color: var(--ink2); flex-wrap: wrap; }
+.legend span::before { content: ""; display: inline-block; width: 12px; height: 10px; margin-right: 5px; vertical-align: -1px; background: var(--c); border-radius: 2px; }
+.legend span.line::before { height: 3px; vertical-align: 3px; }
+.legend span.dash::before { height: 10px; background: transparent; border: 1.5px dashed var(--c); box-sizing: border-box; }
+footer { margin-top: 16px; font-size: .78rem; color: var(--muted); }
+footer a { color: inherit; }
+#toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--surface); padding: 8px 14px; border-radius: 999px; font-size: .85rem; }
+.explain { line-height: 1.8; display: block; }
+.explain h1 { font-size: 1.2rem; margin: 0 0 8px; }
+.explain h2 { font-size: 1.08rem; margin: 28px 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--accent-weak); }
+.explain h3 { font-size: .98rem; margin: 18px 0 6px; }
+.explain h4 { font-size: .92rem; margin: 14px 0 4px; }
+.explain pre { background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); padding: 8px 12px; overflow-x: auto; font-size: .85rem; }
+.explain code { font-family: var(--f-num); }
+.explain table { border-collapse: collapse; font-size: .85rem; margin: 8px 0; }
+.explain th, .explain td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+.explain th { background: var(--bg); color: var(--ink2); font-weight: 700; }
+.explain hr { border: 0; border-top: 1px solid var(--line); margin: 24px 0; }
+.explain .figure { max-width: 460px; margin: 8px 0; }
+
+/* 金利の変化の行 */
+.rc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 12px; }
+.rc .lab { font-size: .8rem; color: var(--ink2); }
+/* 返済表・比較の表 */
+table.sch { border-collapse: collapse; width: 100%; font-size: .85rem; }
+table.sch th, table.sch td { padding: 4px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+table.sch thead th { font-size: .76rem; color: var(--ink2); font-weight: 700; text-align: right; background: var(--bg); position: sticky; top: 0; }
+table.sch thead th:first-child, table.sch tbody th { text-align: left; }
+table.sch tbody th { font-weight: 400; color: var(--ink2); }
+table.sch tbody th small { display: block; color: var(--muted); font-size: .72rem; }
+table.sch td { font-family: var(--f-num); font-variant-numeric: tabular-nums; text-align: right; }
+table.sch tr.bonus td, table.sch tr.bonus th { background: var(--accent-weak); }
+table.sch tr.adj td:nth-child(3) { color: var(--accent); }
+table.sch tr.pre td { background: var(--ok-weak); }
+table.sch tr.best td { font-weight: 700; }
+table.sch td.ng { color: var(--ng); }
+table.sch td .u { color: var(--muted); font-size: .76rem; margin-left: 2px; font-family: var(--f-ui); }
+.sch-wrap { max-height: 70vh; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+/* 金利の比較 */
+table.pr { border-collapse: collapse; width: 100%; font-size: .85rem; }
+table.pr th, table.pr td { padding: 6px 8px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+table.pr thead th { font-size: .76rem; color: var(--ink2); text-align: right; background: var(--bg); white-space: nowrap; }
+table.pr thead th:first-child { text-align: left; }
+table.pr tbody th { text-align: left; font-weight: 700; min-width: 200px; }
+table.pr tbody th small { display: block; font-weight: 400; color: var(--muted); font-size: .74rem; line-height: 1.5; }
+table.pr tbody th small a { color: inherit; }
+table.pr td { font-family: var(--f-num); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+table.pr tr.grp th { background: var(--bg); color: var(--ink2); font-size: .8rem; }
+table.pr tbody tr[data-id] { cursor: pointer; }
+table.pr tbody tr[data-id]:hover { background: var(--accent-weak); }
+table.pr tbody tr.cur { background: var(--accent-weak); }
+.tag { display: inline-block; font-family: var(--f-ui); font-size: .72rem; font-weight: 400; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; margin-left: 4px; color: var(--ink2); }
+.tag.sec { border-color: var(--warn); color: var(--warn); }
+.kpi .main b { font-size: 1.5rem; color: var(--accent); }
+.kpi > div > small { display: block; line-height: 1.4; margin-top: 2px; }
+.kpi b small { font-family: var(--f-ui); font-size: .72rem; color: var(--muted); margin-left: 2px; }
+/* スマホ用の要約：狭い画面だけ、入力の途中に月々の支払額を出す */
+.sum { display: none; }
+@media (max-width: 760px) {
+  .sum:not(:empty) { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 2px 12px; background: var(--accent-weak); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 16px; }
+  .sum .lab { grid-column: 1 / -1; font-size: .78rem; color: var(--ink2); }
+  .sum b { font: 500 1.6rem var(--f-num); color: var(--accent); font-variant-numeric: tabular-nums; }
+  .sum b small { font-family: var(--f-ui); font-size: .8rem; color: var(--muted); }
+  .sum .sub { grid-column: 1 / -1; font-size: .8rem; color: var(--ink2); }
+  .sum .more { grid-row: 2; grid-column: 2; font-size: .82rem; color: var(--accent); }
+}
+details.opt > summary { cursor: pointer; font-weight: 700; font-size: .95rem; list-style: none; }
+details.opt > summary::-webkit-details-marker { display: none; }
+details.opt > summary::before { content: "＋"; display: inline-block; width: 1.2em; color: var(--accent); }
+details.opt[open] > summary::before { content: "－"; }
+details.opt > summary small { font-weight: 400; color: var(--muted); font-size: .78rem; margin-left: 6px; }
+details.opt[open] > summary { margin-bottom: 4px; }
+details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
+
+/* 支援リンク（DESIGN.md 4章）：本文の文字色を引き継ぎ、印刷では隠す */
+.support a { color: inherit; white-space: nowrap; }
+@media print { .support { display: none !important; } }
+</style>
+
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <a class="home" href="https://kotaooka.github.io/" title="QC Workbench（ツール一覧）へ戻る">QC Workbench</a><span class="crumb" aria-hidden="true">›</span><h1>自動車ローン計算機</h1>
+      <span class="std">元利均等 / 残価設定 / 繰上げ返済</span>
+      <button class="btn theme" id="themeBtn" type="button" aria-label="表示テーマを切り替え">表示：自動</button>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="calc" type="button">計算</button>
+      <button role="tab" aria-selected="false" data-tab="rates" type="button">金利の比較</button>
+      <button role="tab" aria-selected="false" data-tab="table" type="button">返済表</button>
+      <button role="tab" aria-selected="false" data-tab="explain" type="button">解説</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- ===== 計算 ===== -->
+  <section class="panel" id="calcPanel">
+    <div class="col">
+      <div class="box">
+        <h2>借りる額と金利</h2>
+        <div class="fields">
+          <div class="field"><label for="cPrice">支払う額（車両・諸費用）[円]</label><input type="text" id="cPrice" inputmode="numeric"></div>
+          <div class="field"><label for="cDown">頭金 [円]</label><input type="text" id="cDown" inputmode="numeric"></div>
+          <p class="hint wide" id="cLoanNote"></p>
+          <div class="field wide"><label for="cPreset">金利の例</label><select id="cPreset" class="ui"></select></div>
+          <div class="field"><label for="cApr">金利（実質年率）[%]</label><input type="text" id="cApr" inputmode="decimal"></div>
+          <div class="field"><label for="cN">支払回数 [回]</label><input type="text" id="cN" inputmode="numeric"></div>
+          <p class="hint wide" id="cPresetNote"></p>
+          <div class="field wide"><label for="cFirst">初回の支払月</label><select id="cFirst" class="ui"></select></div>
+          <div class="field wide"><span class="lab">返済方式</span>
+            <div class="seg" id="cMethod" role="group" aria-label="返済方式"><button type="button" data-v="level" aria-pressed="true">元利均等</button><button type="button" data-v="principal" aria-pressed="false">元金均等</button></div></div>
+        </div>
+        <p class="privacy">入力したデータは、この端末の外に送りません。入力は自動でこの端末に保存します。</p>
+      </div>
+      <div class="sum" id="cSum" aria-live="polite"></div>
+      <div class="box">
+        <h2>残価（据置）とボーナス</h2>
+        <div class="fields">
+          <div class="field wide"><label for="cBalloon">最終回に据え置く額（残価）[円]</label><input type="text" id="cBalloon" inputmode="numeric"></div>
+          <div class="field wide"><span class="lab">ボーナス併用</span>
+            <div class="seg" id="cBmode" role="group" aria-label="ボーナス併用"><button type="button" data-v="none" aria-pressed="true">なし</button><button type="button" data-v="amount" aria-pressed="false">ボーナス月の額を決める</button><button type="button" data-v="share" aria-pressed="false">元金の一部を回す</button></div></div>
+          <div class="field" data-b="amount"><label for="cBamt">ボーナス月の額 [円]</label><input type="text" id="cBamt" inputmode="numeric"></div>
+          <div class="field wide" data-b="amount"><span class="lab">ボーナス月の額の入れ方</span>
+            <div class="seg" id="cBinc" role="group" aria-label="ボーナス月の額の入れ方"><button type="button" data-v="add" aria-pressed="true">月額に加算</button><button type="button" data-v="total" aria-pressed="false">その月の支払額</button></div></div>
+          <div class="field wide" data-b="share"><label for="cBshare">借入額のうちボーナスで返す分 [円]</label><input type="text" id="cBshare" inputmode="numeric"></div>
+          <div class="field" data-b="any"><label for="cBm1">ボーナス月（1 つ目）</label><select id="cBm1" class="ui"></select></div>
+          <div class="field" data-b="any"><label for="cBm2">ボーナス月（2 つ目）</label><select id="cBm2" class="ui"></select></div>
+        </div>
+        <p class="hint" id="cBnote"></p>
+      </div>
+      <div class="box">
+        <h2>端数の扱い</h2>
+        <div class="fields">
+          <div class="field"><label for="cUnit">月額の単位（未満は切捨て）</label><select id="cUnit" class="ui"><option value="1">1 円</option><option value="10">10 円</option><option value="100">100 円</option><option value="1000">1,000 円</option></select></div>
+          <div class="field"><span class="lab">端数を払う回</span>
+            <div class="seg" id="cAdj" role="group" aria-label="端数を払う回"><button type="button" data-v="first" aria-pressed="false">初回</button><button type="button" data-v="last" aria-pressed="true">最後</button></div></div>
+        </div>
+        <p class="hint">銀行は 1 円単位で最終回、ディーラーのローンは 100 円単位で初回か最終回の 1 回前に端数をまとめることが多いです。</p>
+      </div>
+      <div class="box">
+        <details class="opt" id="cPpBox"><summary>繰上げ返済<small>期間短縮と返済額軽減を比べる</small></summary>
+          <div class="inner">
+            <div class="fields">
+              <div class="field"><label for="cPpk">返す回（その回の支払のあと）</label><input type="text" id="cPpk" inputmode="numeric"></div>
+              <div class="field"><label for="cPpx">返す額 [円]</label><input type="text" id="cPpx" inputmode="numeric"></div>
+            </div>
+            <p class="hint">毎月分の元金に充てます。信販会社のローンは一部の繰上げ返済ができず、一括返済だけのことがあります。契約で確かめてください。</p>
+          </div>
+        </details>
+      </div>
+      <div class="box">
+        <details class="opt" id="cRcBox"><summary>金利の変化<small>変動金利の上昇を試す</small></summary>
+          <div class="inner">
+            <div class="rc" id="cRc"></div>
+            <div class="field"><span class="lab">金利が変わったときの返済額</span>
+              <div class="seg" id="cRule" role="group" aria-label="金利が変わったときの返済額"><button type="button" data-v="recalc" aria-pressed="true">その都度計算し直す</button><button type="button" data-v="5y125" aria-pressed="false">5 年ルール・125% ルール</button></div></div>
+            <p class="hint" id="cRuleNote"></p>
+          </div>
+        </details>
+        <div class="row"><button class="btn" type="button" id="cReset">入力を消す</button><button class="btn" type="button" id="cEx">例を入れる</button></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="box">
+        <h2 id="cTitle">返済額</h2>
+        <div class="kpi" id="cKpi"></div>
+        <div class="msgs" id="cMsgs"></div>
+      </div>
+      <div class="box">
+        <h2>借入残高の推移</h2>
+        <div class="figure" id="cFig"></div>
+        <div class="legend" id="cLegend"></div>
+        <p class="hint" id="cFigNote"></p>
+      </div>
+      <div class="box">
+        <h2>毎回の支払の内訳</h2>
+        <div class="figure" id="cBars"></div>
+        <div class="legend"><span style="--c:var(--s1)">元金</span><span style="--c:var(--s2)">利息</span></div>
+        <p class="hint">返済の初めは利息の割合が大きく、元金はゆっくり減ります。高い棒はボーナス月、最後の高い棒は据え置いた残価です。</p>
+      </div>
+      <div class="box" id="cCmpBox">
+        <h2>比べる</h2>
+        <div class="scroll" id="cCmp"></div>
+        <div class="row"><button class="btn" type="button" id="cCopy">結果をコピー（Excel 用）</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 金利の比較 ===== -->
+  <section id="ratesPanel" hidden>
+    <div class="col">
+      <div class="box">
+        <h2 id="rTitle">金利の比較</h2>
+        <p class="hint" id="rCond"></p>
+        <div class="scroll" id="rTable"></div>
+        <p class="hint" id="rNote"></p>
+        <div class="row"><button class="btn" type="button" id="rCopy">表をコピー（Excel 用）</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 返済表 ===== -->
+  <section id="tablePanel" hidden>
+    <div class="col">
+      <div class="box">
+        <h2 id="tTitle">返済表</h2>
+        <div class="kpi" id="tKpi"></div>
+        <div class="sch-wrap" id="tTable"></div>
+        <p class="hint">色の付いた行はボーナス月です。金額の色が違う回は、端数を払う回（または最終回）です。緑の行は繰上げ返済をした回です。</p>
+        <div class="row"><button class="btn" type="button" id="tCopy">表をコピー（Excel 用）</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 解説（docs/explanation.md から tools/build.py で埋め込む） ===== -->
+  <section id="explainPanel" hidden>
+    <div class="box explain">
+<!--EXPLAIN-START-->
+<h1>自動車ローン計算機の解説</h1>
+<p>借入額・金利（実質年率）・支払回数から、自動車ローンの毎回の支払額と利息を求めます。ディーラーの残価設定ローン（据置）、ボーナス併用、月額の端数の扱い、繰上げ返済、変動金利の上昇も計算できます。</p>
+<h2>計算の約束</h2>
+<ul>
+<li>月利は <strong>実質年率 ÷ 12</strong> です。銀行のローンも、信販会社・ディーラーのローンの「実質年率」も、この月利で毎月の残高に利息をかける形で表示されています</li>
+<li>毎回の利息は <strong>1 円未満切捨て</strong> です</li>
+<li>月額は選んだ単位（1・10・100・1,000 円）の未満を切り捨て、切り捨てた分は「端数を払う回」（初回か最後）でまとめて払います</li>
+<li>初回の支払は、借りた月の翌月とみなします（借入日から初回までの日割りの利息は計算しません）</li>
+</ul>
+<h3>元利均等</h3>
+<p>毎回の支払額（元金＋利息）が同じになる返し方です。自動車ローンのほとんどがこの形です。</p>
+<pre><code>月額 A = P × r ÷ (1 − (1 + r)^−n)
+</code></pre>
+<ul>
+<li>P：借入額、r：月利（年利 ÷ 12）、n：支払回数</li>
+<li>返済の初めは利息の割合が大きく、残高はゆっくり減ります</li>
+</ul>
+<h3>元金均等</h3>
+<p>毎回の元金を同じ（P ÷ n）にし、利息は残高に応じて減る返し方です。初回がいちばん多く、回を追うごとに減ります。同じ金利・回数なら、元利均等より利息の合計が少なくなります。自動車ローンで選べることは少ないので、比べるための計算として使ってください。</p>
+<h2>残価（据置）</h2>
+<p>最終回に払う額（残価・据置額）を決めておき、残りを月々で返す形です。ディーラーの「残価設定型クレジット」、銀行の「据置タイプ」がこれにあたります。</p>
+<pre><code>月額 A = (P − B ÷ (1 + r)^n) × r ÷ (1 − (1 + r)^−(n−1))
+</code></pre>
+<ul>
+<li>B：最終回に払う額（残価）。1〜n−1 回目に月額を払い、n 回目に B を払います</li>
+<li><strong>残価にも最後まで利息がかかります</strong>。同じ金利・回数なら、残価を据え置かないより利息の合計は多くなります（「比べる」で差を出します）</li>
+<li>最終回は、残価を払う・車を返す・乗り換えるのどれかで精算します。返すときは走行距離や傷の条件があり、満たさないと追加の支払が出ます</li>
+</ul>
+<h2>ボーナス併用</h2>
+<p>2 つの形を選べます。</p>
+<table>
+<thead>
+<tr>
+<th>形</th>
+<th>使われるところ</th>
+<th>計算</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ボーナス月の額を決める</td>
+<td>ディーラー・信販会社</td>
+<td>ボーナス月に払う額を先に決め、残りを月額で割る。「月額に加算」と「その月の支払額（月額の代わり）」を選べる</td>
+</tr>
+<tr>
+<td>元金の一部を回す</td>
+<td>銀行</td>
+<td>借入額のうちボーナス返済分を、ボーナス月だけで返す均等額にする。ボーナス分の利息は、前のボーナス月からの月数で月割り（単利）。多くの銀行は借入額の 50% まで</td>
+</tr>
+</tbody>
+</table>
+<p>ボーナス月は初回の支払月から数えて決まります。据置があるときは、最終回にはボーナスを足しません。</p>
+<h2>公表されている支払例との一致</h2>
+<p>マツダの公式サイトの支払例（マツダスカイプラン、令和 8 年 10 月時点）は、次の条件で 1 円単位まで同じ値になります。「例を入れる」でこの条件を入れられます。</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>公表の値</th>
+<th>このツール</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>条件</td>
+<td>CX-30・元金 2,572,481 円・5.40%・37 回・初回 2 月・ボーナス月 7 月と 12 月に 100,000 円（月額の代わり）・残価 1,740,000 円</td>
+<td>同じ</td>
+</tr>
+<tr>
+<td>月々（100 円未満切捨て）</td>
+<td>19,900 円 × 29 回</td>
+<td>19,900 円</td>
+</tr>
+<tr>
+<td>最終回 1 回前（端数の調整）</td>
+<td>19,883 円</td>
+<td>19,883 円</td>
+</tr>
+<tr>
+<td>分割支払金合計</td>
+<td>2,936,983 円</td>
+<td>2,936,983 円</td>
+</tr>
+</tbody>
+</table>
+<p>ほかの公表例との照合と差は、README の「計算の検証」に書いています。</p>
+<h2>端数の扱い</h2>
+<table>
+<thead>
+<tr>
+<th>端数を払う回</th>
+<th>よく使われるところ</th>
+<th>例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>最後（最終回、残価があるときは最終回の 1 回前）</td>
+<td>銀行、マツダ・日産の支払例</td>
+<td>月額 19,900 円、最終回 1 回前 19,883 円</td>
+</tr>
+<tr>
+<td>初回</td>
+<td>ホンダの支払例、信販会社</td>
+<td>初回 16,138 円、2 回目以降 11,300 円</td>
+</tr>
+</tbody>
+</table>
+<p>調整する回の額は、その後の支払で残高がちょうど 0 になる（残価があるときは最終回がちょうど残価になる）ように、契約時の金利で逆算しています。</p>
+<h2>繰上げ返済</h2>
+<p>指定した回の支払のあとに、指定した額を元金に充てます。</p>
+<ul>
+<li><strong>期間短縮</strong>：月額はそのまま。残高が早く 0 になり、回数が減ります。利息の減り方が大きいのはこちらです</li>
+<li><strong>返済額軽減</strong>：回数はそのまま。残りの元金を残りの回数で返す額に下がります</li>
+</ul>
+<p>注意：</p>
+<ul>
+<li>信販会社のローンは一部の繰上げ返済ができず、一括返済だけのことがあります</li>
+<li>繰上げ返済の手数料（銀行の窓口では数千円かかることがある）は計算に入れていません</li>
+<li>残価（据置）があるローンの一部繰上げ返済は、会社ごとに扱いが違うため計算しません</li>
+</ul>
+<h2>金利の変化（変動金利）</h2>
+<p>銀行のマイカーローンの多くは変動金利です。年 2 回（4 月 1 日・10 月 1 日など）金利が見直されます。「変わる回」には、新しい金利で利息を計算する最初の回を入れてください（三菱UFJ銀行の場合、4 月の見直しは 7 月の返済分から）。</p>
+<table>
+<thead>
+<tr>
+<th>返済額の決め方</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>その都度計算し直す</td>
+<td>金利が変わった回から、残りの元金を残りの回数で返す額に出し直します</td>
+</tr>
+<tr>
+<td>5 年ルール・125% ルール</td>
+<td>金利が変わっても 60 回（5 年）は返済額が変わらず、元金と利息の内訳だけが変わります。61 回目に出し直し、増えるときは前の 1.25 倍までです。利息が返済額を超えると、払いきれない利息（未払利息）は次の回に繰り越し、最後に残った元金と利息は最終回にまとめて払います</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>三菱UFJ銀行の目的別ローン（変動・元利均等）は 5 年ルール・125% ルールです。「10 月 1 日を 1 回経過するごとに 1 年」と数えるので、実際の区切りは初回から 60 回ちょうどではありません。このツールは 60 回ごとで近似しています</li>
+<li>返済額の決め方は銀行ごとに違います。契約書や商品概要説明書で確かめてください</li>
+</ul>
+<h2>金利の例について</h2>
+<p>「金利の例」と「金利の比較」タブの値は、確認日（README とツールに表示）に出典のページで確かめた値です。</p>
+<ul>
+<li><strong>ジャックス・オリコなど信販会社は、オートローンの金利を公表していません</strong>。販売店との契約とキャンペーンで決まり、販売店の見積書に「実質年率」として書かれます。このツールでは、相場の目安（二次情報）と、販売店が掲載していたキャンペーンの例だけを載せています</li>
+<li>メーカー系（マツダ・ホンダ・日産）は、公式サイトの支払例の実質年率です。販売店や時期で違います</li>
+<li>銀行は公式ページの表示金利です。公式ページから数値を読み取れなかった銀行は、比較記事の値に「二次情報」と付けています</li>
+<li>変動金利の銀行ローンは、借りた日の金利が適用されます。審査の結果で範囲のどこになるかが決まります</li>
+</ul>
+<h2>計算していないこと</h2>
+<ul>
+<li><strong>借入日から初回の支払日までの日割りの利息</strong>：初回を借入の翌月とみなしています。実際は初回が 2 か月後になることがあり、その分の利息が初回に加わります</li>
+<li><strong>手数料・保証料</strong>：事務手数料、所有権留保の手数料、銀行の保証料（多くは金利に含まれる）、繰上げ返済の手数料</li>
+<li><strong>銀行のボーナス返済の初回</strong>：初回ボーナスまでの月数は銀行と契約日で違います。このツールは、初回の支払月から数えた最初のボーナス月にしています</li>
+<li><strong>残価の精算</strong>：車を返すときの査定・追加の支払、乗り換えるときの下取り</li>
+<li><strong>税金・保険料・登録の費用</strong>：「支払う額」に含めて入れてください</li>
+</ul>
+<!--EXPLAIN-END-->
+    </div>
+  </section>
+  <footer>
+    <a href="https://github.com/kotaooka/car-loan-calc">GitHub</a> ・ MIT License<span class="support"> ・ <a href="https://buymeacoffee.com/kotaooka" target="_blank" rel="noopener"><span aria-hidden="true">☕</span> 開発を応援する（Buy Me a Coffee）</a></span>
+  </footer>
+</main>
+<div id="toast" hidden></div>
+
+<script src="js/loan.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
