@@ -180,6 +180,19 @@ table.sch tr.best td { font-weight: 700; }
 table.sch td.ng { color: var(--ng); }
 table.sch td .u { color: var(--muted); font-size: .76rem; margin-left: 2px; font-family: var(--f-ui); }
 .sch-wrap { max-height: 70vh; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+/* 逆算 */
+.rev { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.rev div { background: var(--bg); border-radius: 6px; padding: 6px 8px; min-width: 0; }
+.rev span { display: block; font-size: .72rem; color: var(--ink2); }
+.rev b { font: 500 1.15rem var(--f-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rev .main b { color: var(--accent); }
+.rev b small { font-family: var(--f-ui); font-size: .72rem; color: var(--muted); margin-left: 2px; }
+.rev small.s { display: block; font-size: .72rem; color: var(--muted); line-height: 1.4; margin-top: 2px; }
+table.revn { border-collapse: collapse; width: 100%; font-size: .84rem; margin-top: 4px; }
+table.revn th, table.revn td { padding: 3px 6px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+table.revn th { text-align: left; font-weight: 400; color: var(--ink2); }
+table.revn td { font-family: var(--f-num); font-variant-numeric: tabular-nums; text-align: right; }
+table.revn tr.cur { background: var(--accent-weak); }
 /* 金利の比較 */
 table.pr { border-collapse: collapse; width: 100%; font-size: .85rem; }
 table.pr th, table.pr td { padding: 6px 8px; border-bottom: 1px solid var(--grid); vertical-align: top; }
@@ -260,6 +273,14 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
         <p class="privacy">入力したデータは、この端末の外に送りません。入力は自動でこの端末に保存します。</p>
       </div>
       <div class="sum" id="cSum" aria-live="polite"></div>
+      <div class="box">
+        <h2>月々の支払額から逆算</h2>
+        <div class="fields">
+          <div class="field wide"><label for="cTarget">払える月々の支払額 [円]</label><input type="text" id="cTarget" inputmode="numeric" placeholder="例：30,000"></div>
+        </div>
+        <div id="cRev" aria-live="polite"></div>
+        <p class="hint">金利・回数・初回の月・残価・ボーナス・端数の扱いは、ほかの欄の値で計算します。月額は単位未満を切り捨てた額で比べるので、端数を払う回の額は少し違います。</p>
+      </div>
       <div class="box">
         <h2>残価（据置）とボーナス</h2>
         <div class="fields">
@@ -472,6 +493,15 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
 </tbody>
 </table>
 <p>調整する回の額は、その後の支払で残高がちょうど 0 になる（残価があるときは最終回がちょうど残価になる）ように、契約時の金利で逆算しています。</p>
+<h2>月々の支払額から逆算</h2>
+<p>「払える月々の支払額」を入れると、その月額で借りられる額の上限と、頭金を足した支払う額（車両・諸費用）の上限を出します。金利・回数・初回の月・残価・ボーナス・端数の扱いは、ほかの欄の値を使います。</p>
+<ul>
+<li>比べるのは単位未満を切り捨てた月額（見積書の「月々○円」）です。元金均等では初回の額で比べます</li>
+<li>切り捨てた端数は端数を払う回にまとまるので、その回の額も表示します。100 円単位では、その回が月額より数千円多くなることがあります</li>
+<li>月額は借入額に対して増える一方なので、上限は 1 円単位まで探して求めています（式で解くと、月額の切捨てと端数の調整を含められないため）</li>
+<li>回数ごと（24〜120 回）の上限も並べます。回数を延ばすと借りられる額は増えますが、利息の合計も増えます</li>
+<li>残価やボーナス月の額を決めているときは、それらを払ったうえで月額がこの額になる上限です</li>
+</ul>
 <h2>繰上げ返済</h2>
 <p>指定した回の支払のあとに、指定した額を元金に充てます。</p>
 <ul>

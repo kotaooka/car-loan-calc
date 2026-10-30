@@ -18,7 +18,7 @@
   // ---- 状態 ----
   const DEF = () => ({ price: '3,000,000', down: '500,000', preset: '', apr: '3.0', n: '60', first: String(nextMonth()), method: 'level',
     balloon: '', bmode: 'none', bamt: '', binc: 'add', bshare: '', bm1: '7', bm2: '12', unit: '1', adj: 'last',
-    ppk: '', ppx: '', rc: [{ k: '', apr: '' }, { k: '', apr: '' }, { k: '', apr: '' }], rule: 'recalc' });
+    ppk: '', ppx: '', target: '', rc: [{ k: '', apr: '' }, { k: '', apr: '' }, { k: '', apr: '' }], rule: 'recalc' });
   let st = store.get(KEY);
   if (!st || !st.c) st = { mode: 'calc', view: 'base', c: DEF() };
   st.c = Object.assign(DEF(), st.c);
@@ -37,7 +37,7 @@
     [0, 1, 2].map(i => `<input type="text" id="cRcK${i}" inputmode="numeric" aria-label="金利が変わる回 ${i + 1}"><input type="text" id="cRcA${i}" inputmode="decimal" aria-label="変わったあとの金利 ${i + 1}">`).join('');
 
   // ---- 入力と状態の対応 ----
-  const IN = { cPrice: 'price', cDown: 'down', cPreset: 'preset', cApr: 'apr', cN: 'n', cFirst: 'first', cBalloon: 'balloon', cBamt: 'bamt', cBshare: 'bshare', cBm1: 'bm1', cBm2: 'bm2', cUnit: 'unit', cPpk: 'ppk', cPpx: 'ppx' };
+  const IN = { cPrice: 'price', cDown: 'down', cPreset: 'preset', cApr: 'apr', cN: 'n', cFirst: 'first', cBalloon: 'balloon', cBamt: 'bamt', cBshare: 'bshare', cBm1: 'bm1', cBm2: 'bm2', cUnit: 'unit', cPpk: 'ppk', cPpx: 'ppx', cTarget: 'target' };
   const findPreset = id => LC.PRESETS.find(p => p.id === id) || null;
   function fillInputs() {
     Object.entries(IN).forEach(([id, k]) => { $(id).value = st.c[k] ?? ''; });
@@ -56,7 +56,7 @@
     if (k === 'apr') { const p = findPreset(st.c.preset); if (p && !(num(st.c.apr) / 100 >= p.lo - 1e-9 && num(st.c.apr) / 100 <= p.hi + 1e-9)) { st.c.preset = ''; $('cPreset').value = ''; } }
     save(); render();
   }));
-  ['cPrice', 'cDown', 'cBalloon', 'cBamt', 'cBshare', 'cPpx'].forEach(id => $(id).addEventListener('blur', () => {
+  ['cPrice', 'cDown', 'cBalloon', 'cBamt', 'cBshare', 'cPpx', 'cTarget'].forEach(id => $(id).addEventListener('blur', () => {
     const v = num($(id).value);
     if (Number.isFinite(v) && v >= 0) { const t = Math.round(v).toLocaleString('ja-JP'); $(id).value = t; st.c[IN[id]] = t; save(); }
   }));
@@ -139,8 +139,43 @@
 
   // ================= 計算 =================
   let R = null; const cCopy = [];
+  // 逆算：払える月額から、借りられる額と車両・諸費用の上限を出す（回数ごとの表も）
+  function renderReverse(o, bad, downIn) {
+    const el = $('cRev'), t = num(st.c.target), down = downIn >= 0 ? downIn : 0;
+    $('cTarget').classList.toggle('bad', String(st.c.target).trim() !== '' && !(t > 0));
+    if (String(st.c.target).trim() === '') { el.innerHTML = ''; return; }
+    if (!(t > 0)) { el.innerHTML = '<div class="msg err">× 月々の支払額は 0 より大きい値を入れてください。</div>'; return; }
+    // 借入額に関係しない欄（金利・回数・残価・ボーナス・端数）に誤りがあるときは計算しない
+    const need = ['cApr', 'cN', 'cBamt', 'cBm1', 'cBm2'].filter(id => bad.has(id));
+    if (need.length) { el.innerHTML = '<div class="msg err">× 金利・回数・ボーナスの赤い欄の値を確かめてください。</div>'; return; }
+    const base = Object.assign(baseOf(o), { P: 1 });
+    const m = LC.maxPrincipal(base, t);
+    if (m.errors.length) { el.innerHTML = `<div class="msg err">× ${esc(m.errors[0])}</div>`; return; }
+    const r = LC.simulate(Object.assign({}, base, { P: m.P }));
+    const princ = o.method === 'principal';
+    el.innerHTML = `<div class="rev">` +
+      `<div class="main"><span>借りられる額の上限</span><b>${yen(m.P)}<small> 円</small></b><small class="s">${princ ? '初回' : '月額'} ${yen(m.monthly)} 円・${pct(o.apr)}%・${o.n} 回${!princ && m.adjK && m.adjPay !== m.monthly ? `。端数をまとめる${m.adjK === 1 ? '初回' : ` ${m.adjK} 回目`}は ${yen(m.adjPay)} 円` : ''}</small></div>` +
+      `<div><span>頭金を足した支払う額の上限</span><b>${yen(m.P + down)}<small> 円</small></b><small class="s">頭金 ${yen(down)} 円</small></div>` +
+      `<div><span>利息の合計</span><b>${yen(r.totalInterest)}<small> 円</small></b></div>` +
+      `<div><span>ローンの支払総額</span><b>${yen(r.totalPay)}<small> 円</small></b>${o.balloon > 0 ? `<small class="s">最終回（残価）${yen(r.finalPay)} 円を含む</small>` : ''}</div>` +
+      `</div>` +
+      // 回数ごとの上限（今の回数の行に色）
+      `<div class="scroll"><table class="revn"><thead><tr><th>回数</th><th style="text-align:right">借りられる額</th><th style="text-align:right">頭金込み</th><th style="text-align:right">利息</th></tr></thead><tbody>` +
+      [...new Set([24, 36, 48, 60, 72, 84, 96, 120, o.n])].sort((a, b) => a - b).map(n => {
+        const mm = LC.maxPrincipal(Object.assign({}, base, { n }), t);
+        if (mm.errors.length) return `<tr${n === o.n ? ' class="cur"' : ''}><th>${n} 回</th><td colspan="3" style="text-align:left;font-family:var(--f-ui)">―</td></tr>`;
+        const rr = LC.simulate(Object.assign({}, base, { n, P: mm.P }));
+        return `<tr${n === o.n ? ' class="cur"' : ''}><th>${n} 回</th><td>${yen(mm.P)}</td><td>${yen(mm.P + down)}</td><td>${yen(rr.totalInterest)}</td></tr>`;
+      }).join('') + `</tbody></table></div>` +
+      `<div class="row" style="margin-top:8px"><button class="btn" type="button" id="cRevUse">この上限で計算する</button></div>`;
+    $('cRevUse').addEventListener('click', () => {
+      st.c.price = (m.P + down).toLocaleString('ja-JP'); fillInputs(); save(); render(); toast('支払う額を、借りられる上限に頭金を足した額にしました');
+    });
+  }
+
   function renderCalc() {
     const { o, bad, down } = read();
+    renderReverse(o, bad, down);
     const p = findPreset(st.c.preset);
     $('cLoanNote').textContent = o.P > 0 ? `借入額：${yen(o.P)} 円` : '';
     $('cPresetNote').innerHTML = p ? `${esc(p.note)}。出典：<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.src)}</a>（${esc(LC.RATES_CHECKED)} 確認）` + (p.hi > p.lo ? `。範囲 ${pct(p.lo)}〜${pct(p.hi)}% のうち、下限を入れています。` : '') : '販売店の見積書や銀行の審査結果の金利（実質年率）を入れてください。「金利の比較」タブで各社の例を比べられます。';

@@ -150,6 +150,8 @@
       s.adj = atStart && adjust === 'first' ? ps[0] : ps[ps.length - 1];
     }
     subs.forEach(s => setLevel(s, 1, true));
+    // ボーナス月の額と残価だけで借入額を返しきってしまう（月額がマイナスになる）ときは計算しない
+    if (subs[0].rawA < 0) return { errors: ['ボーナス月の額と残価だけで借入額を超えるため、月額がマイナスになります。ボーナス月の額か残価を減らしてください。'], negative: true };
     const firstA = subs.map(s => s.A), firstRaw = subs.map(s => s.rawA);
 
     const rows = [];
@@ -265,6 +267,25 @@
       url: 'https://221616.com/guide/loan/car-loan/', src: 'ガリバーの解説記事（2025-07-11更新）', note: '相場の目安です' }
   ];
 
-  const api = { simulate, levelPayment, bonusPeriods, monthOf, rateAt, check, floorU, PRESETS, RATES_CHECKED };
+  // ---------------- 逆算：月々の支払額から借りられる額 ----------------
+  // 月額（元金均等は初回の額）が target 円以下になる最大の借入額（円）。残価・ボーナス・端数の単位は o のまま。
+  // 比べるのは単位未満を切り捨てた月額（広告や見積書の「月々○円」と同じ）。切り捨てた端数は調整の回で払うので、その回の額も返す。
+  // 月額は借入額に対して増える一方なので、倍々で上限を見つけてから 2 分法で 1 円まで詰める
+  function maxPrincipal(o, target) {
+    if (!(target > 0)) return { errors: ['月々の支払額は 0 より大きい値を入れてください。'] };
+    const base = Object.assign({}, o, { prepay: null, rateChanges: [] });
+    // 月額がマイナスになる小さい借入額は、どの目標より小さいとみなす
+    const pay = P => { const r = simulate(Object.assign({}, base, { P })); return r.negative ? -Infinity : r.errors.length ? Infinity : (o.method === 'principal' ? r.firstPay : r.A); };
+    const b = o.bonus || { mode: 'none' };
+    const minP = Math.floor((o.balloon || 0) + (b.mode === 'share' ? b.share : 0)) + 1;
+    if (pay(minP) > target) return { errors: ['この月額では、残価やボーナスの額を払いきれません。月額を上げるか、ボーナス月の額・残価を見直してください。'] };
+    let lo = minP, hi = Math.max(minP * 2, Math.ceil(target) * 12);
+    while (pay(hi) <= target) { lo = hi; hi *= 2; if (hi > 1e11) return { errors: ['借りられる額が大きすぎて計算できません。'] }; }
+    while (hi - lo > 1) { const mid = Math.floor((lo + hi) / 2); if (pay(mid) <= target) lo = mid; else hi = mid; }
+    const r = simulate(Object.assign({}, base, { P: lo }));
+    return { errors: [], P: lo, monthly: pay(lo), adjK: r.adjK, adjPay: r.adjPay };
+  }
+
+  const api = { simulate, maxPrincipal, levelPayment, bonusPeriods, monthOf, rateAt, check, floorU, PRESETS, RATES_CHECKED };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LoanCalc = api;
 })(typeof self !== 'undefined' ? self : this);

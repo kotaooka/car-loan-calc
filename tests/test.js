@@ -141,7 +141,39 @@ ok('ボーナス月が 1 つ', L.simulate({ P: 1e6, apr: 0.03, n: 60, first: 1, 
 ok('元金均等に据置', L.simulate({ P: 1e6, apr: 0.03, n: 60, first: 1, method: 'principal', balloon: 1e5 }).errors.length > 0);
 ok('据置に一部繰上げ', L.simulate({ P: 1e6, apr: 0.03, n: 60, first: 1, balloon: 1e5, prepay: { k: 10, amount: 1e5, mode: 'shorten' } }).errors.length > 0);
 
-// ================= 5. 金利のプリセット =================
+// ================= 5. 逆算（月々の支払額から借りられる額） =================
+// 順方向の計算（上で照合済み）の逆なので、往復で確かめる：結果の借入額で月額（単位未満切捨て）が目標以下、1 円増やすと目標を超える
+{
+  const cases = [
+    ['元利均等 3%・60 回・1 円単位', { apr: 0.03, n: 60 }, 44921],
+    ['元利均等 0%', { apr: 0, n: 60 }, 20000],
+    ['元金均等 4%・84 回（初回の額）', { apr: 0.04, n: 84, method: 'principal' }, 50000],
+    ['マツダ CX-30 の条件・100 円単位', { apr: 0.054, n: 37, first: 2, balloon: 1740000, bonus: { mode: 'amount', amount: 100000, months: [7, 12], include: 'total' }, round: { unit: 100, adjust: 'last' } }, 19900],
+    ['銀行のボーナス併用（60 万円）', { apr: 0.05, n: 60, bonus: { mode: 'share', share: 600000, months: [6, 12] } }, 26419]
+  ];
+  for (const [name, o, target] of cases) {
+    const m = L.maxPrincipal(Object.assign({ first: 1, round: { unit: 1, adjust: 'last' } }, o), target);
+    if (m.errors.length) { ok(name, false, m.errors.join(' ')); continue; }
+    const pay = P => { const r = run(Object.assign({}, o, { P })); return o.method === 'principal' ? r.firstPay : r.A; };
+    ok(`逆算 ${name} 月額が目標以下`, pay(m.P) <= target, `${pay(m.P)} > ${target}`);
+    ok(`逆算 ${name} 1 円増やすと目標を超える`, pay(m.P + 1) > target, `${pay(m.P + 1)}`);
+  }
+  // 手計算：3%・60 回で月額 44,921 円（1 円単位）→ 丸める前の月額が 44,922 円未満になる上限 = 44,922 × 年金現価係数 の直前
+  const af = (1 - Math.pow(1.0025, -60)) / 0.0025;
+  eq('逆算 3%・60 回の上限（手計算）', L.maxPrincipal({ P: 1, apr: 0.03, n: 60, first: 1, round: { unit: 1, adjust: 'last' } }, 44921).P, Math.ceil(44922 * af) - 1, 1);
+  eq('逆算 0% の上限', L.maxPrincipal({ P: 1, apr: 0, n: 60, first: 1, round: { unit: 1, adjust: 'last' } }, 20000).P, 20000 * 60 + 59, 0);
+  // 調整の回の額も返す（100 円単位では、切り捨てた端数がまとまって大きくなることがある）
+  const m100 = L.maxPrincipal({ P: 1, apr: 0.05, n: 60, first: 1, round: { unit: 100, adjust: 'last' } }, 30000);
+  ok('逆算 100 円単位 月額と調整回', m100.monthly === 30000 && m100.adjPay > 30000, JSON.stringify(m100));
+  ok('逆算 月額 0', L.maxPrincipal({ P: 1, apr: 0.03, n: 60, first: 1 }, 0).errors.length > 0);
+  // ボーナス月の額と残価が大きいと、月額 10 円でも借りられる額がある（その月額は 0〜10 円）
+  const big = { P: 1, apr: 0.05, n: 60, first: 1, round: { unit: 1, adjust: 'last' }, balloon: 1000000, bonus: { mode: 'amount', amount: 50000, months: [6, 12], include: 'total' } };
+  const mb = L.maxPrincipal(big, 10);
+  ok('逆算 ボーナスと残価が大きいときの月額', mb.errors.length === 0 && mb.monthly >= 0 && mb.monthly <= 10, JSON.stringify(mb));
+  ok('月額がマイナスになる借入額', L.simulate(Object.assign({}, big, { P: 1000001 })).errors.length > 0);
+}
+
+// ================= 6. 金利のプリセット =================
 for (const p of L.PRESETS) {
   ok(`プリセット ${p.name} の出典`, /^https:\/\//.test(p.url || ''));
   ok(`プリセット ${p.name} の値`, p.lo > 0 && p.hi >= p.lo && p.hi < 0.3);
