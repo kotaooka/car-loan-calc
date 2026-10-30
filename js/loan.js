@@ -157,8 +157,9 @@
       const apr = aprAt(k);
       // 金利が変わった回：毎回再計算なら、この回から均等額を出し直す
       if (rule === 'recalc' && k > 1 && apr !== aprAt(k - 1)) subs.forEach(s => { if (s.bal > 0 && [...s.pays].some(j => j >= k)) setLevel(s, k, false); });
-      // 5 年ルール：60 回ごとに出し直し、増えるときは前の 1.25 倍まで（それまでは金利が変わっても額は同じ）
-      if (rule === '5y125' && k > 1 && (k - 1) % 60 === 0) subs.forEach(s => {
+      // 5 年ルール：60 回目までは金利が変わっても額は同じ。61 回目に出し直し、その後は金利が変わるたびに出し直す。
+      // 増えるときは前の 1.25 倍まで
+      if (rule === '5y125' && (k === 61 || (k > 61 && apr !== aprAt(k - 1)))) subs.forEach(s => {
         if (!(s.bal > 0) || ![...s.pays].some(j => j >= k)) return;
         const old = s.A; setLevel(s, k, false);
         if (s.A > old * 1.25) { s.A = floorU(old * 1.25, u); s.capped = true; }
@@ -237,13 +238,11 @@
   const RATES_CHECKED = '2026-10-30';
   const PRESETS = [
     { id: 'mufg', group: 'bank', name: '三菱UFJ銀行 ネットDEマイカーローン', type: '変動', lo: 0.02375, hi: 0.035, rule: '5y125', official: true,
-      url: 'https://www.bk.mufg.jp/kariru/mycar/', src: '三菱UFJ銀行（2026-10-01現在の表示）', note: '借入額で金利が決まります。金利が変わっても5年間は返済額が変わりません（5年ルール・125%ルール）' },
-    { id: 'mufg-sue', group: 'bank', name: '三菱UFJ銀行 ネットDEマイカーローン（据置タイプ）', type: '変動', lo: 0.04975, hi: 0.04975, rule: '5y125', official: true,
-      url: 'https://www.bk.mufg.jp/kariru/mycar/', src: '三菱UFJ銀行（2026-10-01現在の表示）', note: '最終回に据え置く残価型の銀行ローンです' },
+      url: 'https://www.bk.mufg.jp/kariru/mycar/', src: '三菱UFJ銀行（2026-10-01現在の表示）', note: '借入額で金利が決まります。同行の目的別ローン（変動・元利均等）の説明では、金利が変わっても5年間は返済額が変わりません（5年ルール・125%ルール）' },
     { id: 'smbc', group: 'bank', name: '三井住友銀行 マイカーローン', type: '変動', lo: 0.0345, hi: 0.0345, official: true,
-      url: 'https://www.smbc.co.jp/kojin/mokuteki_loan/car/', src: '三井住友銀行', note: '見直し時の返済額の決め方は公式ページに書かれていません' },
+      url: 'https://www.smbc.co.jp/kojin/mokuteki_loan/car/', src: '三井住友銀行', rule: 'recalc', note: '金利の見直しに合わせて、新しい金利で返済額を計算し直します' },
     { id: 'docomo', group: 'bank', name: 'ドコモSMTBネット銀行 自動車ローン', type: '変動', lo: 0.03275, hi: 0.04475, official: true,
-      url: 'https://www.netbk.co.jp/contents/gen/lineup/loan/car/kinri/', src: 'ドコモSMTBネット銀行', note: '基準金利です。住宅ローンの残高があると年1.0%、カードローンの契約があると年0.5%下がります' },
+      url: 'https://www.netbk.co.jp/contents/gen/lineup/loan/car/kinri/', src: 'ドコモSMTBネット銀行', note: '基準金利です。住宅ローンの残高があると年1.0%、カードローンの契約があると年0.5%下がります（両方でも1.0%まで）' },
     { id: 'resona', group: 'bank', name: 'りそな銀行 マイカーローン', type: '変動', lo: 0.021, hi: 0.047, official: false,
       url: 'https://carmo-kun.jp/column/carloan/bank/', src: '比較記事（2026-10-21時点）', note: '公式ページから数値を読み取れなかったため、比較記事の値です' },
     { id: 'mizuho', group: 'bank', name: 'みずほ銀行 多目的ローン', type: '変動', lo: 0.06775, hi: 0.06775, official: false,

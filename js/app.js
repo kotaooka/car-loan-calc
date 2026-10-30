@@ -146,7 +146,7 @@
     $('cPresetNote').innerHTML = p ? `${esc(p.note)}。出典：<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.src)}</a>（${esc(LC.RATES_CHECKED)} 確認）` + (p.hi > p.lo ? `。範囲 ${pct(p.lo)}〜${pct(p.hi)}% のうち、下限を入れています。` : '') : '販売店の見積書や銀行の審査結果の金利（実質年率）を入れてください。「金利の比較」タブで各社の例を比べられます。';
     $('cBnote').textContent = st.c.bmode === 'amount' ? (st.c.binc === 'add' ? 'ディーラーのローンの形です。ボーナス月は「月額＋この額」を払い、残りを月額で割ります。' : 'ボーナス月は月額の代わりにこの額だけ払います（マツダの支払例の形）。') :
       st.c.bmode === 'share' ? '銀行の形です。借入額のうちこの額を、年 2 回のボーナス月だけで返します（ふつう借入額の 50% まで）。' : '';
-    $('cRuleNote').textContent = st.c.rule === '5y125' ? '金利が変わっても 60 回（5 年）は返済額が変わらず、利息と元金の内訳だけが変わります。61 回目に出し直し、増えるときは前の 1.25 倍までです。払いきれない利息は最終回にまとめて払います（三菱UFJ銀行など）。' : '金利が変わった回から、残りの元金を残りの回数で返す額に出し直します。';
+    $('cRuleNote').textContent = st.c.rule === '5y125' ? '金利が変わっても 60 回（5 年）は返済額が変わらず、利息と元金の内訳だけが変わります。61 回目に出し直し、その後は金利が変わるたびに出し直します。増えるときは前の 1.25 倍までです。払いきれない利息は最終回にまとめて払います（三菱UFJ銀行の目的別ローンなど）。' : '金利が変わった回から、残りの元金を残りの回数で返す額に出し直します。';
     cCopy.length = 0; R = null;
     const msgs = [];
     const clear = () => { ['cSum', 'cKpi', 'cFig', 'cBars', 'cCmp', 'cLegend', 'cFigNote'].forEach(id => { $(id).innerHTML = ''; }); };
@@ -181,7 +181,7 @@
     if (o.n > 120) msgs.push(['info', '自動車ローンの期間は多くが 10 年（120 回）以内です。']);
     if (ppErr) msgs.push(['warn', ppErr]);
     if (V.rate && V.rate.unpaidEnd > 0) msgs.push(['warn', `金利が上がって利息が返済額を超え、払いきれない利息（未払利息）が最大 ${yen(V.rate.unpaidEnd)} 円たまります。最終回にまとめて払うことになります。`]);
-    if (V.rate && V.rate.capped) msgs.push(['warn', '61 回目の返済額が 125% ルールの上限で止まっています。残りの元金と利息は最終回にまとめて払います。']);
+    if (V.rate && V.rate.capped) msgs.push(['warn', '61 回目以降の返済額が 125% ルールの上限で止まっています。残りの元金と利息は最終回にまとめて払います。']);
     if (o.bonus.mode === 'share' && o.bonus.share > (o.P - o.balloon) * 0.5) msgs.push(['info', 'ボーナスで返す分が借入額の 50% を超えています。多くの銀行は 50% までです。']);
     showMsgs(msgs);
 

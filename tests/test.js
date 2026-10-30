@@ -97,6 +97,10 @@ const ann = (P, r, m) => r === 0 ? P / m : P * r / (1 - Math.pow(1 + r, -m));
   ok('5 年ルール 60 回目まで同額', f.rows.slice(0, 59).every(x => x.pay === f.A));
   ok('5 年ルール 61 回目で増額', f.rows[60].pay > f.A);
   ok('5 年ルール 増額は 1.25 倍まで', f.rows[60].pay <= Math.floor(f.A * 1.25) + 1);
+  // 61 回目のあとは、金利が変わるたびに出し直す（三菱UFJ銀行「お借入後5回目の10月1日を基準とした見直しにて毎回の返済額を再計算」）
+  const g = run(Object.assign({}, base, { n: 120, rateChanges: [{ k: 13, apr: 0.025 }, { k: 73, apr: 0.03 }], rule: '5y125' }));
+  ok('5 年ルール 61 回目以降の金利の変化で出し直す', g.rows[72].pay > g.rows[71].pay);
+  ok('5 年ルール 61〜72 回目は同額', g.rows.slice(60, 72).every(x => x.pay === g.rows[60].pay));
   // 急な上昇：利息が返済額を超えると未払利息が出る
   const h = run({ P: 3000000, apr: 0.01, n: 120, rateChanges: [{ k: 2, apr: 0.15 }], rule: '5y125' });
   ok('5 年ルール 未払利息が出る', h.unpaidEnd > 0);
