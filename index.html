@@ -221,6 +221,13 @@ table.pr tbody tr.cur { background: var(--accent-weak); }
   .sum .sub { grid-column: 1 / -1; font-size: .8rem; color: var(--ink2); }
   .sum .more { grid-row: 2; grid-column: 2; font-size: .82rem; color: var(--accent); }
 }
+.opts { gap: 0; }
+.opts h2 { margin-bottom: 4px; }
+.opts details.opt { border-top: 1px solid var(--grid); padding: 10px 0; }
+.opts .row { margin-top: 12px; }
+.seg.dir { display: flex; }
+.seg.dir button { flex: 1 1 0; padding: 8px 6px; }
+details.opt > summary small { display: block; margin: 2px 0 0 1.2em !important; }
 details.opt > summary { cursor: pointer; font-weight: 700; font-size: .95rem; list-style: none; }
 details.opt > summary::-webkit-details-marker { display: none; }
 details.opt > summary::before { content: "＋"; display: inline-block; width: 1.2em; color: var(--accent); }
@@ -257,71 +264,64 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
   <section class="panel" id="calcPanel">
     <div class="col">
       <div class="box">
-        <h2>借りる額と金利</h2>
+        <div class="seg dir" id="cDir" role="group" aria-label="計算の向き"><button type="button" data-v="fwd" aria-pressed="true">借入額 → 月々</button><button type="button" data-v="rev" aria-pressed="false">月々 → 借入額</button></div>
         <div class="fields">
-          <div class="field"><label for="cPrice">支払う額（車両・諸費用）[円]</label><input type="text" id="cPrice" inputmode="numeric"></div>
+          <div class="field" data-dir="fwd"><label for="cPrice">支払う額（車両・諸費用）[円]</label><input type="text" id="cPrice" inputmode="numeric"></div>
+          <div class="field" data-dir="rev"><label for="cTarget">払える月々の額 [円]</label><input type="text" id="cTarget" inputmode="numeric" placeholder="例：30,000"></div>
           <div class="field"><label for="cDown">頭金 [円]</label><input type="text" id="cDown" inputmode="numeric"></div>
-          <p class="hint wide" id="cLoanNote"></p>
           <div class="field wide"><label for="cPreset">金利の例</label><select id="cPreset" class="ui"></select></div>
           <div class="field"><label for="cApr">金利（実質年率）[%]</label><input type="text" id="cApr" inputmode="decimal"></div>
           <div class="field"><label for="cN">支払回数 [回]</label><input type="text" id="cN" inputmode="numeric"></div>
           <p class="hint wide" id="cPresetNote"></p>
-          <div class="field wide"><label for="cFirst">初回の支払月</label><select id="cFirst" class="ui"></select></div>
-          <div class="field wide"><span class="lab">返済方式</span>
-            <div class="seg" id="cMethod" role="group" aria-label="返済方式"><button type="button" data-v="level" aria-pressed="true">元利均等</button><button type="button" data-v="principal" aria-pressed="false">元金均等</button></div></div>
         </div>
-        <p class="privacy">入力したデータは、この端末の外に送りません。入力は自動でこの端末に保存します。</p>
+        <p class="privacy">入力したデータは、この端末の外に送りません。</p>
       </div>
       <div class="sum" id="cSum" aria-live="polite"></div>
-      <div class="box">
-        <h2>月々の支払額から逆算</h2>
-        <div class="fields">
-          <div class="field wide"><label for="cTarget">払える月々の支払額 [円]</label><input type="text" id="cTarget" inputmode="numeric" placeholder="例：30,000"></div>
-        </div>
-        <div id="cRev" aria-live="polite"></div>
-        <p class="hint">金利・回数・初回の月・残価・ボーナス・端数の扱いは、ほかの欄の値で計算します。月額は単位未満を切り捨てた額で比べるので、端数を払う回の額は少し違います。</p>
-      </div>
-      <div class="box">
-        <h2>残価（据置）とボーナス</h2>
-        <div class="fields">
-          <div class="field wide"><label for="cBalloon">最終回に据え置く額（残価）[円]</label><input type="text" id="cBalloon" inputmode="numeric"></div>
-          <div class="field wide"><span class="lab">ボーナス併用</span>
-            <div class="seg" id="cBmode" role="group" aria-label="ボーナス併用"><button type="button" data-v="none" aria-pressed="true">なし</button><button type="button" data-v="amount" aria-pressed="false">ボーナス月の額を決める</button><button type="button" data-v="share" aria-pressed="false">元金の一部を回す</button></div></div>
-          <div class="field" data-b="amount"><label for="cBamt">ボーナス月の額 [円]</label><input type="text" id="cBamt" inputmode="numeric"></div>
-          <div class="field wide" data-b="amount"><span class="lab">ボーナス月の額の入れ方</span>
-            <div class="seg" id="cBinc" role="group" aria-label="ボーナス月の額の入れ方"><button type="button" data-v="add" aria-pressed="true">月額に加算</button><button type="button" data-v="total" aria-pressed="false">その月の支払額</button></div></div>
-          <div class="field wide" data-b="share"><label for="cBshare">借入額のうちボーナスで返す分 [円]</label><input type="text" id="cBshare" inputmode="numeric"></div>
-          <div class="field" data-b="any"><label for="cBm1">ボーナス月（1 つ目）</label><select id="cBm1" class="ui"></select></div>
-          <div class="field" data-b="any"><label for="cBm2">ボーナス月（2 つ目）</label><select id="cBm2" class="ui"></select></div>
-        </div>
-        <p class="hint" id="cBnote"></p>
-      </div>
-      <div class="box">
-        <h2>端数の扱い</h2>
-        <div class="fields">
-          <div class="field"><label for="cUnit">月額の単位（未満は切捨て）</label><select id="cUnit" class="ui"><option value="1">1 円</option><option value="10">10 円</option><option value="100">100 円</option><option value="1000">1,000 円</option></select></div>
-          <div class="field"><span class="lab">端数を払う回</span>
-            <div class="seg" id="cAdj" role="group" aria-label="端数を払う回"><button type="button" data-v="first" aria-pressed="false">初回</button><button type="button" data-v="last" aria-pressed="true">最後</button></div></div>
-        </div>
-        <p class="hint">銀行は 1 円単位で最終回、ディーラーのローンは 100 円単位で初回か最終回の 1 回前に端数をまとめることが多いです。</p>
-      </div>
-      <div class="box">
-        <details class="opt" id="cPpBox"><summary>繰上げ返済<small>期間短縮と返済額軽減を比べる</small></summary>
+      <div class="box opts">
+        <h2>条件を足す</h2>
+        <details class="opt" id="oBal"><summary>残価・ボーナス<small id="sBal"></small></summary>
           <div class="inner">
             <div class="fields">
-              <div class="field"><label for="cPpk">返す回（その回の支払のあと）</label><input type="text" id="cPpk" inputmode="numeric"></div>
-              <div class="field"><label for="cPpx">返す額 [円]</label><input type="text" id="cPpx" inputmode="numeric"></div>
+              <div class="field wide"><label for="cBalloon">最終回に据え置く額（残価）[円]</label><input type="text" id="cBalloon" inputmode="numeric" placeholder="なし"></div>
+              <div class="field wide"><span class="lab">ボーナス併用</span>
+                <div class="seg" id="cBmode" role="group" aria-label="ボーナス併用"><button type="button" data-v="none" aria-pressed="true">なし</button><button type="button" data-v="amount" aria-pressed="false">額を決める</button><button type="button" data-v="share" aria-pressed="false">元金の一部を回す</button></div></div>
+              <div class="field" data-b="amount"><label for="cBamt">ボーナス月の額 [円]</label><input type="text" id="cBamt" inputmode="numeric"></div>
+              <div class="field" data-b="amount"><span class="lab">その月の月額は</span>
+                <div class="seg" id="cBinc" role="group" aria-label="ボーナス月の月額"><button type="button" data-v="add" aria-pressed="true">払う</button><button type="button" data-v="total" aria-pressed="false">払わない</button></div></div>
+              <div class="field wide" data-b="share"><label for="cBshare">借入額のうちボーナスで返す分 [円]</label><input type="text" id="cBshare" inputmode="numeric"></div>
+              <div class="field" data-b="any"><label for="cBm1">ボーナス月</label><select id="cBm1" class="ui"></select></div>
+              <div class="field" data-b="any"><label for="cBm2">&nbsp;</label><select id="cBm2" class="ui" aria-label="ボーナス月（2 つ目）"></select></div>
             </div>
-            <p class="hint">毎月分の元金に充てます。信販会社のローンは一部の繰上げ返済ができず、一括返済だけのことがあります。契約で確かめてください。</p>
+            <p class="hint" id="cBnote"></p>
           </div>
         </details>
-      </div>
-      <div class="box">
-        <details class="opt" id="cRcBox"><summary>金利の変化<small>変動金利の上昇を試す</small></summary>
+        <details class="opt" id="oPay"><summary>返済方式・初回の月・端数<small id="sPay"></small></summary>
+          <div class="inner">
+            <div class="fields">
+              <div class="field wide"><span class="lab">返済方式</span>
+                <div class="seg" id="cMethod" role="group" aria-label="返済方式"><button type="button" data-v="level" aria-pressed="true">元利均等</button><button type="button" data-v="principal" aria-pressed="false">元金均等</button></div></div>
+              <div class="field"><label for="cFirst">初回の支払月</label><select id="cFirst" class="ui"></select></div>
+              <div class="field"><label for="cUnit">月額の単位</label><select id="cUnit" class="ui"><option value="1">1 円</option><option value="10">10 円</option><option value="100">100 円</option><option value="1000">1,000 円</option></select></div>
+              <div class="field wide"><span class="lab">切り捨てた端数を払う回</span>
+                <div class="seg" id="cAdj" role="group" aria-label="端数を払う回"><button type="button" data-v="first" aria-pressed="false">初回</button><button type="button" data-v="last" aria-pressed="true">最後</button></div></div>
+            </div>
+            <p class="hint">銀行は 1 円単位で最後、ディーラーは 100 円単位で初回か最後に端数をまとめることが多いです。</p>
+          </div>
+        </details>
+        <details class="opt" id="cPpBox"><summary>繰上げ返済<small id="sPp"></small></summary>
+          <div class="inner">
+            <div class="fields">
+              <div class="field"><label for="cPpk">返す回（支払のあと）</label><input type="text" id="cPpk" inputmode="numeric"></div>
+              <div class="field"><label for="cPpx">返す額 [円]</label><input type="text" id="cPpx" inputmode="numeric"></div>
+            </div>
+            <p class="hint">期間短縮と返済額軽減を比べます。信販会社のローンは一括返済だけのことがあります。</p>
+          </div>
+        </details>
+        <details class="opt" id="cRcBox"><summary>金利の変化<small id="sRc"></small></summary>
           <div class="inner">
             <div class="rc" id="cRc"></div>
-            <div class="field"><span class="lab">金利が変わったときの返済額</span>
-              <div class="seg" id="cRule" role="group" aria-label="金利が変わったときの返済額"><button type="button" data-v="recalc" aria-pressed="true">その都度計算し直す</button><button type="button" data-v="5y125" aria-pressed="false">5 年ルール・125% ルール</button></div></div>
+            <div class="field"><span class="lab">変わったときの返済額</span>
+              <div class="seg" id="cRule" role="group" aria-label="金利が変わったときの返済額"><button type="button" data-v="recalc" aria-pressed="true">その都度計算し直す</button><button type="button" data-v="5y125" aria-pressed="false">5 年ルール</button></div></div>
             <p class="hint" id="cRuleNote"></p>
           </div>
         </details>
@@ -332,25 +332,23 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
       <div class="box">
         <h2 id="cTitle">返済額</h2>
         <div class="kpi" id="cKpi"></div>
+        <div id="cRevTable"></div>
         <div class="msgs" id="cMsgs"></div>
       </div>
       <div class="box">
-        <h2>借入残高の推移</h2>
+        <div class="row" style="justify-content:space-between">
+          <h2 id="cFigTitle">借入残高の推移</h2>
+          <div class="seg" id="cChart" role="group" aria-label="図の種類"><button type="button" data-v="bal" aria-pressed="true">残高</button><button type="button" data-v="bars" aria-pressed="false">支払の内訳</button></div>
+        </div>
         <div class="figure" id="cFig"></div>
         <div class="legend" id="cLegend"></div>
         <p class="hint" id="cFigNote"></p>
       </div>
-      <div class="box">
-        <h2>毎回の支払の内訳</h2>
-        <div class="figure" id="cBars"></div>
-        <div class="legend"><span style="--c:var(--s1)">元金</span><span style="--c:var(--s2)">利息</span></div>
-        <p class="hint">返済の初めは利息の割合が大きく、元金はゆっくり減ります。高い棒はボーナス月、最後の高い棒は据え置いた残価です。</p>
-      </div>
-      <div class="box" id="cCmpBox">
+      <div class="box" id="cCmpBox" hidden>
         <h2>比べる</h2>
         <div class="scroll" id="cCmp"></div>
-        <div class="row"><button class="btn" type="button" id="cCopy">結果をコピー（Excel 用）</button></div>
       </div>
+      <div class="row"><button class="btn" type="button" id="cCopy">結果をコピー（Excel 用）</button></div>
     </div>
   </section>
 
@@ -494,12 +492,12 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
 </table>
 <p>調整する回の額は、その後の支払で残高がちょうど 0 になる（残価があるときは最終回がちょうど残価になる）ように、契約時の金利で逆算しています。</p>
 <h2>月々の支払額から逆算</h2>
-<p>「払える月々の支払額」を入れると、その月額で借りられる額の上限と、頭金を足した支払う額（車両・諸費用）の上限を出します。金利・回数・初回の月・残価・ボーナス・端数の扱いは、ほかの欄の値を使います。</p>
+<p>計算の向きを「月々 → 借入額」にして「払える月々の額」を入れると、その月額で借りられる額の上限と、頭金を足した支払う額（車両・諸費用）の上限を出します。金利・回数・初回の月・残価・ボーナス・端数の扱いは、ほかの欄の値を使います。返済額・図・返済表は、この上限を借りたときの値です。</p>
 <ul>
 <li>比べるのは単位未満を切り捨てた月額（見積書の「月々○円」）です。元金均等では初回の額で比べます</li>
 <li>切り捨てた端数は端数を払う回にまとまるので、その回の額も表示します。100 円単位では、その回が月額より数千円多くなることがあります</li>
 <li>月額は借入額に対して増える一方なので、上限は 1 円単位まで探して求めています（式で解くと、月額の切捨てと端数の調整を含められないため）</li>
-<li>回数ごと（24〜120 回）の上限も並べます。回数を延ばすと借りられる額は増えますが、利息の合計も増えます</li>
+<li>「回数を変えたときの上限」で、24〜120 回の上限も並べます。回数を延ばすと借りられる額は増えますが、利息の合計も増えます</li>
 <li>残価やボーナス月の額を決めているときは、それらを払ったうえで月額がこの額になる上限です</li>
 </ul>
 <h2>繰上げ返済</h2>

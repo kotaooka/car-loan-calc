@@ -18,9 +18,10 @@
   // ---- 状態 ----
   const DEF = () => ({ price: '3,000,000', down: '500,000', preset: '', apr: '3.0', n: '60', first: String(nextMonth()), method: 'level',
     balloon: '', bmode: 'none', bamt: '', binc: 'add', bshare: '', bm1: '7', bm2: '12', unit: '1', adj: 'last',
-    ppk: '', ppx: '', target: '', rc: [{ k: '', apr: '' }, { k: '', apr: '' }, { k: '', apr: '' }], rule: 'recalc' });
+    ppk: '', ppx: '', target: '30,000', dir: 'fwd', rc: [{ k: '', apr: '' }, { k: '', apr: '' }, { k: '', apr: '' }], rule: 'recalc' });
   let st = store.get(KEY);
-  if (!st || !st.c) st = { mode: 'calc', view: 'base', c: DEF() };
+  if (!st || !st.c) st = { mode: 'calc', view: 'base', chart: 'bal', c: DEF() };
+  if (!['bal', 'bars'].includes(st.chart)) st.chart = 'bal';
   st.c = Object.assign(DEF(), st.c);
   if (!Array.isArray(st.c.rc) || st.c.rc.length !== 3) st.c.rc = DEF().rc;
   const save = () => store.set(KEY, st);
@@ -43,6 +44,9 @@
     Object.entries(IN).forEach(([id, k]) => { $(id).value = st.c[k] ?? ''; });
     st.c.rc.forEach((r, i) => { $(`cRcK${i}`).value = r.k; $(`cRcA${i}`).value = r.apr; });
     document.querySelectorAll('[data-b]').forEach(el => { const b = el.dataset.b; el.hidden = b === 'any' ? st.c.bmode === 'none' : st.c.bmode !== b; });
+    document.querySelectorAll('[data-dir]').forEach(el => { el.hidden = el.dataset.dir !== st.c.dir; });
+    // 値が入っている「条件を足す」の項目は開いておく
+    if (String(st.c.balloon).trim() || st.c.bmode !== 'none') $('oBal').open = true;
     if (st.c.ppx || st.c.ppk) $('cPpBox').open = true;
     if (st.c.rc.some(r => r.k || r.apr)) $('cRcBox').open = true;
   }
@@ -83,24 +87,34 @@
     segs('cBmode', () => st.c.bmode, v => { st.c.bmode = v; }),
     segs('cBinc', () => st.c.binc, v => { st.c.binc = v; }),
     segs('cAdj', () => st.c.adj, v => { st.c.adj = v; }),
-    segs('cRule', () => st.c.rule, v => { st.c.rule = v; })
+    segs('cRule', () => st.c.rule, v => { st.c.rule = v; }),
+    segs('cDir', () => st.c.dir, v => { st.c.dir = v; }),
+    segs('cChart', () => st.chart, v => { st.chart = v; })
   ];
 
   // ---- 入力の読み取り ----
   function read() {
     const c = st.c, bad = new Set(), o = {};
+    const rev = c.dir === 'rev';
     const price = num(c.price), down = String(c.down).trim() === '' ? 0 : num(c.down);
-    if (!(price > 0)) bad.add('cPrice');
-    if (!(down >= 0) || down >= price) bad.add('cDown');
-    o.P = Math.round(price - down);
+    if (rev) {
+      // 月々から借入額を出すとき：借入額は後で逆算する
+      o.target = num(c.target); if (!(o.target > 0)) bad.add('cTarget');
+      if (!(down >= 0)) bad.add('cDown');
+      o.P = NaN;
+    } else {
+      if (!(price > 0)) bad.add('cPrice');
+      if (!(down >= 0) || down >= price) bad.add('cDown');
+      o.P = Math.round(price - down);
+    }
     o.apr = num(c.apr) / 100; if (!(o.apr >= 0 && o.apr < 0.3)) bad.add('cApr');
     o.n = num(c.n); if (!(Number.isInteger(o.n) && o.n >= 2 && o.n <= 180)) bad.add('cN');
     o.first = +c.first; o.method = c.method;
     o.balloon = String(c.balloon).trim() === '' ? 0 : num(c.balloon);
-    if (!(o.balloon >= 0) || (o.P > 0 && o.balloon >= o.P) || (o.method === 'principal' && o.balloon > 0)) bad.add('cBalloon');
+    if (!(o.balloon >= 0) || (!rev && o.P > 0 && o.balloon >= o.P) || (o.method === 'principal' && o.balloon > 0)) bad.add('cBalloon');
     o.bonus = { mode: c.method === 'principal' ? 'none' : c.bmode, months: [+c.bm1, +c.bm2], include: c.binc };
     if (c.bmode === 'amount') { o.bonus.amount = num(c.bamt); if (!(o.bonus.amount > 0)) bad.add('cBamt'); }
-    if (c.bmode === 'share') { o.bonus.share = num(c.bshare); if (!(o.bonus.share > 0 && o.bonus.share < o.P - o.balloon)) bad.add('cBshare'); }
+    if (c.bmode === 'share') { o.bonus.share = num(c.bshare); if (!(o.bonus.share > 0 && (rev || o.bonus.share < o.P - o.balloon))) bad.add('cBshare'); }
     if (c.bmode !== 'none' && c.bm1 === c.bm2) { bad.add('cBm1'); bad.add('cBm2'); }
     o.round = { unit: +c.unit, adjust: c.adj };
     // 繰上げ返済
@@ -123,7 +137,7 @@
     o.rc.sort((a, b) => a.k - b.k);
     o.rule = c.rule;
     [...Object.keys(IN), 'cRcK0', 'cRcK1', 'cRcK2', 'cRcA0', 'cRcA1', 'cRcA2'].forEach(id => $(id).classList.toggle('bad', bad.has(id)));
-    return { o, bad, down };
+    return { o, bad, down: down >= 0 ? down : 0, rev };
   }
   const baseOf = o => ({ P: o.P, apr: o.apr, n: o.n, first: o.first, method: o.method, balloon: o.balloon, bonus: o.bonus, round: o.round });
 
@@ -139,61 +153,62 @@
 
   // ================= 計算 =================
   let R = null; const cCopy = [];
-  // 逆算：払える月額から、借りられる額と車両・諸費用の上限を出す（回数ごとの表も）
-  function renderReverse(o, bad, downIn) {
-    const el = $('cRev'), t = num(st.c.target), down = downIn >= 0 ? downIn : 0;
-    $('cTarget').classList.toggle('bad', String(st.c.target).trim() !== '' && !(t > 0));
-    if (String(st.c.target).trim() === '') { el.innerHTML = ''; return; }
-    if (!(t > 0)) { el.innerHTML = '<div class="msg err">× 月々の支払額は 0 より大きい値を入れてください。</div>'; return; }
-    // 借入額に関係しない欄（金利・回数・残価・ボーナス・端数）に誤りがあるときは計算しない
-    const need = ['cApr', 'cN', 'cBamt', 'cBm1', 'cBm2'].filter(id => bad.has(id));
-    if (need.length) { el.innerHTML = '<div class="msg err">× 金利・回数・ボーナスの赤い欄の値を確かめてください。</div>'; return; }
+  // 「条件を足す」の各項目の見出しに、今の設定を短く出す
+  function summaries(o) {
+    const c = st.c;
+    const bal = [String(c.balloon).trim() ? `残価 ${yen(num(c.balloon))} 円` : '残価なし',
+      c.bmode === 'none' ? 'ボーナスなし' : c.bmode === 'amount' ? `ボーナス ${String(c.bamt).trim() ? yen(num(c.bamt)) + ' 円' : '（額を入れてください）'}` : `ボーナス返済分 ${String(c.bshare).trim() ? yen(num(c.bshare)) + ' 円' : '（額を入れてください）'}`];
+    $('sBal').textContent = bal.join('・');
+    $('sPay').textContent = `${c.method === 'principal' ? '元金均等' : '元利均等'}・初回 ${c.first}月・${(+c.unit).toLocaleString('ja-JP')} 円単位で${c.adj === 'first' ? '初回' : '最後'}に調整`;
+    $('sPp').textContent = o.pp ? `${o.pp.k} 回目のあとに ${yen(o.pp.amount)} 円` : 'なし';
+    $('sRc').textContent = o.rc.length ? `${o.rc.map(r => `${r.k} 回目から ${pct(r.apr)}%`).join('、')}（${c.rule === '5y125' ? '5 年ルール' : 'その都度計算'}）` : 'なし';
+  }
+
+  // 月々から借入額を出すときの、回数ごとの上限の表
+  function drawRevTable(o, down) {
+    if (!o.target) { $('cRevTable').innerHTML = ''; return; }
     const base = Object.assign(baseOf(o), { P: 1 });
-    const m = LC.maxPrincipal(base, t);
-    if (m.errors.length) { el.innerHTML = `<div class="msg err">× ${esc(m.errors[0])}</div>`; return; }
-    const r = LC.simulate(Object.assign({}, base, { P: m.P }));
-    const princ = o.method === 'principal';
-    el.innerHTML = `<div class="rev">` +
-      `<div class="main"><span>借りられる額の上限</span><b>${yen(m.P)}<small> 円</small></b><small class="s">${princ ? '初回' : '月額'} ${yen(m.monthly)} 円・${pct(o.apr)}%・${o.n} 回${!princ && m.adjK && m.adjPay !== m.monthly ? `。端数をまとめる${m.adjK === 1 ? '初回' : ` ${m.adjK} 回目`}は ${yen(m.adjPay)} 円` : ''}</small></div>` +
-      `<div><span>頭金を足した支払う額の上限</span><b>${yen(m.P + down)}<small> 円</small></b><small class="s">頭金 ${yen(down)} 円</small></div>` +
-      `<div><span>利息の合計</span><b>${yen(r.totalInterest)}<small> 円</small></b></div>` +
-      `<div><span>ローンの支払総額</span><b>${yen(r.totalPay)}<small> 円</small></b>${o.balloon > 0 ? `<small class="s">最終回（残価）${yen(r.finalPay)} 円を含む</small>` : ''}</div>` +
-      `</div>` +
-      // 回数ごとの上限（今の回数の行に色）
-      `<div class="scroll"><table class="revn"><thead><tr><th>回数</th><th style="text-align:right">借りられる額</th><th style="text-align:right">頭金込み</th><th style="text-align:right">利息</th></tr></thead><tbody>` +
-      [...new Set([24, 36, 48, 60, 72, 84, 96, 120, o.n])].sort((a, b) => a - b).map(n => {
-        const mm = LC.maxPrincipal(Object.assign({}, base, { n }), t);
-        if (mm.errors.length) return `<tr${n === o.n ? ' class="cur"' : ''}><th>${n} 回</th><td colspan="3" style="text-align:left;font-family:var(--f-ui)">―</td></tr>`;
-        const rr = LC.simulate(Object.assign({}, base, { n, P: mm.P }));
-        return `<tr${n === o.n ? ' class="cur"' : ''}><th>${n} 回</th><td>${yen(mm.P)}</td><td>${yen(mm.P + down)}</td><td>${yen(rr.totalInterest)}</td></tr>`;
-      }).join('') + `</tbody></table></div>` +
-      `<div class="row" style="margin-top:8px"><button class="btn" type="button" id="cRevUse">この上限で計算する</button></div>`;
+    const rows = [...new Set([24, 36, 48, 60, 72, 84, 96, 120, o.n])].sort((a, b) => a - b).map(n => {
+      const mm = LC.maxPrincipal(Object.assign({}, base, { n }), o.target);
+      if (mm.errors.length) return `<tr${n === o.n ? ' class="cur"' : ''}><th>${n} 回</th><td>―</td><td>―</td><td>―</td></tr>`;
+      const rr = LC.simulate(Object.assign({}, base, { n, P: mm.P }));
+      return `<tr${n === o.n ? ' class="cur"' : ''}><th>${n} 回</th><td>${yen(mm.P)}</td><td>${yen(mm.P + down)}</td><td>${yen(rr.totalInterest)}</td></tr>`;
+    }).join('');
+    $('cRevTable').innerHTML = `<details class="opt"><summary>回数を変えたときの上限</summary><div class="scroll"><table class="revn"><thead><tr><th>回数</th><th style="text-align:right">借りられる額</th><th style="text-align:right">頭金込み</th><th style="text-align:right">利息</th></tr></thead><tbody>${rows}</tbody></table></div></details>` +
+      `<div class="row"><button class="btn" type="button" id="cRevUse">この額で「借入額 → 月々」に切り替える</button></div>`;
     $('cRevUse').addEventListener('click', () => {
-      st.c.price = (m.P + down).toLocaleString('ja-JP'); fillInputs(); save(); render(); toast('支払う額を、借りられる上限に頭金を足した額にしました');
+      st.c.price = (o.P + down).toLocaleString('ja-JP'); st.c.dir = 'fwd'; fillInputs(); save(); render(); toast('「借入額 → 月々」に切り替え、支払う額に上限と頭金の合計を入れました');
     });
   }
 
   function renderCalc() {
-    const { o, bad, down } = read();
-    renderReverse(o, bad, down);
+    const { o, bad, down, rev } = read();
+    summaries(o);
     const p = findPreset(st.c.preset);
-    $('cLoanNote').textContent = o.P > 0 ? `借入額：${yen(o.P)} 円` : '';
-    $('cPresetNote').innerHTML = p ? `${esc(p.note)}。出典：<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.src)}</a>（${esc(LC.RATES_CHECKED)} 確認）` + (p.hi > p.lo ? `。範囲 ${pct(p.lo)}〜${pct(p.hi)}% のうち、下限を入れています。` : '') : '販売店の見積書や銀行の審査結果の金利（実質年率）を入れてください。「金利の比較」タブで各社の例を比べられます。';
+    $('cPresetNote').innerHTML = p ? `${esc(p.src)}（<a href="${esc(p.url)}" target="_blank" rel="noopener">出典</a>・${esc(LC.RATES_CHECKED)} 確認）${p.hi > p.lo ? `。${pct(p.lo)}〜${pct(p.hi)}% の下限を入れています` : ''}` : '見積書の金利（実質年率）を入れるか、例から選んでください。';
     $('cBnote').textContent = st.c.bmode === 'amount' ? (st.c.binc === 'add' ? 'ディーラーのローンの形です。ボーナス月は「月額＋この額」を払い、残りを月額で割ります。' : 'ボーナス月は月額の代わりにこの額だけ払います（マツダの支払例の形）。') :
       st.c.bmode === 'share' ? '銀行の形です。借入額のうちこの額を、年 2 回のボーナス月だけで返します（ふつう借入額の 50% まで）。' : '';
     $('cRuleNote').textContent = st.c.rule === '5y125' ? '金利が変わっても 60 回（5 年）は返済額が変わらず、利息と元金の内訳だけが変わります。61 回目に出し直し、その後は金利が変わるたびに出し直します。増えるときは前の 1.25 倍までです。払いきれない利息は最終回にまとめて払います（三菱UFJ銀行の目的別ローンなど）。' : '金利が変わった回から、残りの元金を残りの回数で返す額に出し直します。';
     cCopy.length = 0; R = null;
     const msgs = [];
-    const clear = () => { ['cSum', 'cKpi', 'cFig', 'cBars', 'cCmp', 'cLegend', 'cFigNote'].forEach(id => { $(id).innerHTML = ''; }); };
+    const clear = () => { ['cSum', 'cKpi', 'cRevTable', 'cFig', 'cCmp', 'cLegend', 'cFigNote'].forEach(id => { $(id).innerHTML = ''; }); $('cCmpBox').hidden = true; };
     if (bad.size) {
       msgs.push(['err', '赤い欄の値を確かめてください。']);
       if (bad.has('cDown')) msgs.push(['err', '頭金は支払う額より小さくしてください。']);
+      if (bad.has('cTarget')) msgs.push(['err', '払える月々の額は 0 より大きい値を入れてください。']);
       if (bad.has('cN')) msgs.push(['err', '支払回数は 2〜180 回の整数で入れてください。']);
       if (bad.has('cBalloon')) msgs.push(['err', o.method === 'principal' ? '元金均等では残価（据置）は使えません。' : '残価は借入額より小さくしてください。']);
       if (bad.has('cBshare')) msgs.push(['err', 'ボーナスで返す分は、借入額から残価を引いた額より小さくしてください。']);
       if (bad.has('cPpk')) msgs.push(['err', '繰上げ返済の回は 1〜最終回の前で入れてください。']);
       if ([0, 1, 2].some(i => bad.has(`cRcK${i}`))) msgs.push(['err', '金利が変わる回は 2〜最終回で入れてください。']);
       showMsgs(msgs); clear(); return;
+    }
+    // 月々から借入額を出すとき：その月額で借りられる上限を借入額にして、あとは同じように計算する
+    if (rev) {
+      const m = LC.maxPrincipal(Object.assign(baseOf(o), { P: 1 }), o.target);
+      if (m.errors.length) { msgs.push(['err', m.errors[0]]); showMsgs(msgs); clear(); return; }
+      o.P = m.P;
+      if (o.bonus.mode === 'share' && !(o.bonus.share < o.P - o.balloon)) { msgs.push(['err', 'ボーナスで返す分が、借りられる額から残価を引いた額以上になります。ボーナス返済分を減らしてください。']); showMsgs(msgs); clear(); return; }
     }
     const base = LC.simulate(baseOf(o));
     if (base.errors.length) { base.errors.forEach(e => msgs.push(['err', e])); showMsgs(msgs); clear(); return; }
@@ -210,9 +225,9 @@
     R = { o, V, down };
 
     // 注意と案内
-    if (o.balloon > 0) msgs.push(['info', '残価は最終回に払うか、車を返す・乗り換えるときに精算します。返すときは走行距離や傷の条件があり、満たさないと追加の支払が出ます。残価にも最後まで利息がかかります。']);
+    if (o.balloon > 0) msgs.push(['info', '残価にも最後まで利息がかかります。車を返すときは走行距離や傷の条件を満たさないと追加の支払が出ます。']);
     if (p && !p.official) msgs.push(['warn', `選んだ金利の例は${p.group === 'range' ? '相場の目安' : '販売店の掲載や比較記事'}の値で、会社の公式の値ではありません。見積書の金利で計算し直してください。`]);
-    if (p && /変動/.test(p.type) && !o.rc.length) msgs.push(['info', '変動金利の例です。「金利の変化」で、途中で金利が上がったときの返済額を試せます。']);
+    if (p && /変動/.test(p.type) && !o.rc.length) msgs.push(['info', '変動金利です。「条件を足す」の「金利の変化」で、金利が上がったときを試せます。']);
     if (o.n > 120) msgs.push(['info', '自動車ローンの期間は多くが 10 年（120 回）以内です。']);
     if (ppErr) msgs.push(['warn', ppErr]);
     if (V.rate && V.rate.unpaidEnd > 0) msgs.push(['warn', `金利が上がって利息が返済額を超え、払いきれない利息（未払利息）が最大 ${yen(V.rate.unpaidEnd)} 円たまります。最終回にまとめて払うことになります。`]);
@@ -220,10 +235,10 @@
     if (o.bonus.mode === 'share' && o.bonus.share > (o.P - o.balloon) * 0.5) msgs.push(['info', 'ボーナスで返す分が借入額の 50% を超えています。多くの銀行は 50% までです。']);
     showMsgs(msgs);
 
-    drawKpi(base, o, down);
-    drawSummary(base, o);
-    drawBalance(V, o);
-    drawBars(base);
+    drawKpi(base, o, down, rev);
+    drawSummary(base, o, rev, down);
+    if (rev) drawRevTable(o, down); else $('cRevTable').innerHTML = '';
+    if (st.chart === 'bars') drawBars(base); else drawBalance(V, o);
     drawCompare(V, o, ppErr);
   }
 
@@ -232,27 +247,38 @@
   }
 
   // 返済額の要点
-  function kpiItems(r, o, down) {
+  function kpiItems(r, o, down, rev) {
     const princ = o.method === 'principal';
     const bonusPay = r.rows.find(x => x.bonus);
     const items = [];
+    if (rev) {
+      items.push(['main', '借りられる額の上限', `${yen(o.P)}<small> 円</small>`, `月々 ${yen(o.target)} 円以下・${pct(o.apr)}%・${o.n} 回`]);
+      items.push(['', '頭金を足した支払う額', `${yen(o.P + down)}<small> 円</small>`, `車両・諸費用の上限（頭金 ${yen(down)} 円）`]);
+    }
     if (princ) items.push(['main', '初回の支払額', `${yen(r.firstPay)}<small> 円</small>`, `元金 ${yen(r.A)} 円＋利息。回を追うごとに減ります`]);
-    else items.push(['main', '月々の支払額', `${yen(r.A)}<small> 円</small>`, `丸める前 ${fmt(r.rawA, 1)} 円`]);
+    else items.push([rev ? '' : 'main', '月々の支払額', `${yen(r.A)}<small> 円</small>`, `丸める前 ${fmt(r.rawA, 1)} 円`]);
     if (!princ && r.adjK != null && r.adjK !== r.count) items.push(['', `${r.adjK === 1 ? '初回' : `${r.adjK} 回目`}（端数の調整）`, `${yen(r.adjPay)}<small> 円</small>`, (d => `月額との差 ${d >= 0 ? '+' : '−'}${yen(Math.abs(d))} 円`)(r.adjPay - r.A - (bonusPay && bonusPay.k === r.adjK ? bonusPay.pay - r.A : 0))]);
     if (bonusPay) items.push(['', 'ボーナス月の支払額', `${yen(bonusPay.pay)}<small> 円</small>`, `${o.bonus.months.map(m => m + '月').join('・')}、${r.rows.filter(x => x.bonus).length} 回`]);
     items.push(['', o.balloon > 0 ? '最終回（残価）' : '最終回', `${yen(r.finalPay)}<small> 円</small>`, `${r.count} 回目・${r.rows[r.count - 1].month}月`]);
-    items.push(['', '利息の合計', `${yen(r.totalInterest)}<small> 円</small>`, `借入額の ${fmt(r.totalInterest / o.P * 100, 1)}%`]);
-    items.push(['', 'ローンの支払総額', `${yen(r.totalPay)}<small> 円</small>`, down > 0 ? `頭金を足すと ${yen(r.totalPay + down)} 円` : '借入額＋利息']);
+    // 元金均等にしたときの利息の差（残価・ボーナスがないときだけ）
+    let alt = `借入額の ${fmt(r.totalInterest / o.P * 100, 1)}%`;
+    if (!princ && !(o.balloon > 0) && o.bonus.mode === 'none') {
+      const pr = LC.simulate({ P: o.P, apr: o.apr, n: o.n, first: o.first, round: o.round, method: 'principal' });
+      if (!pr.errors.length) alt += `。元金均等なら ${yen(r.totalInterest - pr.totalInterest)} 円少ない`;
+    }
+    items.push(['', '利息の合計', `${yen(r.totalInterest)}<small> 円</small>`, alt]);
+    if (!rev) items.push(['', 'ローンの支払総額', `${yen(r.totalPay)}<small> 円</small>`, down > 0 ? `頭金を足すと ${yen(r.totalPay + down)} 円` : '借入額＋利息']);
     return items;
   }
-  function drawKpi(r, o, down) {
-    $('cTitle').textContent = `返済額（借入 ${yen(o.P)} 円・${pct(o.apr)}%・${o.n} 回）`;
-    $('cKpi').innerHTML = kpiItems(r, o, down).map(([cls, lab, val, sub]) => `<div class="${cls}"><span>${esc(lab)}</span><b>${val}</b><small>${esc(sub)}</small></div>`).join('');
+  function drawKpi(r, o, down, rev) {
+    $('cTitle').textContent = rev ? `借りられる額（月々 ${yen(o.target)} 円まで）` : `返済額（借入 ${yen(o.P)} 円・${pct(o.apr)}%・${o.n} 回）`;
+    $('cKpi').innerHTML = kpiItems(r, o, down, rev).map(([cls, lab, val, sub]) => `<div class="${cls}"><span>${esc(lab)}</span><b>${val}</b><small>${esc(sub)}</small></div>`).join('');
   }
   // スマホ用の要約
-  function drawSummary(r, o) {
+  function drawSummary(r, o, rev, down) {
     const princ = o.method === 'principal';
-    $('cSum').innerHTML = `<span class="lab">${princ ? '初回の支払額' : '月々の支払額'}</span><b>${esc(yen(princ ? r.firstPay : r.A))}<small> 円</small></b>` +
+    $('cSum').innerHTML = rev ? `<span class="lab">借りられる額の上限</span><b>${esc(yen(o.P))}<small> 円</small></b><span class="sub">頭金を足すと ${esc(yen(o.P + down))} 円・利息の合計 ${esc(yen(r.totalInterest))} 円</span><a href="#cKpi" class="more">詳しい結果へ</a>` :
+      `<span class="lab">${princ ? '初回の支払額' : '月々の支払額'}</span><b>${esc(yen(princ ? r.firstPay : r.A))}<small> 円</small></b>` +
       `<span class="sub">利息の合計 ${esc(yen(r.totalInterest))} 円・支払総額 ${esc(yen(r.totalPay))} 円${o.balloon > 0 ? `・最終回 ${esc(yen(r.finalPay))} 円` : ''}</span><a href="#cKpi" class="more">詳しい結果へ</a>`;
     $('cSum').querySelector('.more').addEventListener('click', e => { e.preventDefault(); const y = $('cKpi').getBoundingClientRect().top + scrollY - document.querySelector('header.top').offsetHeight - 60; window.scrollTo({ top: y, behavior: 'smooth' }); });
   }
@@ -282,13 +308,17 @@
     // 残価：最終回の前の残高を示す
     if (o.balloon > 0) { const y = Y(o.balloon); s += `<line x1="${L}" x2="${W - Rm}" y1="${y}" y2="${y}" stroke="${css('--muted')}" stroke-dasharray="3 3"/><text x="${L + 6}" y="${y - 4}" font-size="10.5" fill="${css('--muted')}">残価 ${esc(fmt(o.balloon / 1e4, 1))} 万円</text>`; }
     el.innerHTML = s + '</svg>';
-    $('cLegend').innerHTML = used.map(([n, c], i) => `<span class="line" style="--c:var(${c})">${esc(n)}</span>`).join('');
-    $('cFigNote').textContent = o.balloon > 0 ? '残価を据え置くと、残高が最後まで残価より下がりません。その残高にも利息がかかります。' : V.short ? '繰上げ返済をした回で残高が下がります。期間短縮は早く 0 になり、返済額軽減は同じ回に 0 になります。' : '元利均等では、返済の初めほど残高の減りがゆっくりです。';
+    $('cFigTitle').textContent = '借入残高の推移';
+    $('cLegend').innerHTML = used.length > 1 ? used.map(([n, c]) => `<span class="line" style="--c:var(${c})">${esc(n)}</span>`).join('') : '';
+    $('cFigNote').textContent = o.balloon > 0 ? '残価の分は最後まで残高が下がらず、利息がかかり続けます。' : V.short ? '期間短縮は早く 0 になり、返済額軽減は同じ回に 0 になります。' : '';
   }
 
   // 毎回の支払の内訳（契約どおり）
   function drawBars(r) {
-    const el = $('cBars'), narrow = el.clientWidth && el.clientWidth < 480;
+    $('cFigTitle').textContent = '毎回の支払の内訳';
+    $('cLegend').innerHTML = '<span style="--c:var(--s1)">元金</span><span style="--c:var(--s2)">利息</span>';
+    $('cFigNote').textContent = '返済の初めほど利息の割合が大きくなります。高い棒はボーナス月と残価です。';
+    const el = $('cFig'), narrow = el.clientWidth && el.clientWidth < 480;
     const W = narrow ? 420 : 600, H = narrow ? 210 : 230, L = 52, Rm = 14, T = 24, Bm = 30;
     const rows = r.rows, n = rows.length;
     // 最終回に残価があると棒が高くなりすぎるので、目盛りは残価を除いた最大で決める
@@ -323,12 +353,7 @@
     };
     const grp = t => { copy.push([t]); return `<tr><th colspan="6" style="padding-top:10px;color:var(--ink);font-weight:700">${esc(t)}</th></tr>`; };
     const b = V.base;
-    // 返済方式：元利均等と元金均等（残価・ボーナスなしで比べる）
-    const plain = { P: o.P, apr: o.apr, n: o.n, first: o.first, round: o.round };
-    const lv = LC.simulate(Object.assign({}, plain, { method: 'level' })), pr = LC.simulate(Object.assign({}, plain, { method: 'principal' }));
-    sec.push(grp('返済方式' + (o.balloon > 0 || o.bonus.mode !== 'none' ? '（残価・ボーナスなしで比べた値）' : '')));
-    sec.push(row('元利均等', '毎回の額が同じ', lv, lv.A, null));
-    sec.push(row('元金均等', `月々は初回の額。最後は ${yen(pr.finalPay)} 円まで減る`, pr, pr.firstPay, lv.totalInterest));
+    // 比べるもの（残価・繰上げ返済・金利の変化）があるときだけ表を出す。元金均等との差は「利息の合計」に出している
     if (o.balloon > 0) {
       const nb = LC.simulate(Object.assign(baseOf(o), { balloon: 0 }));
       sec.push(grp('残価（据置）'));
@@ -350,6 +375,7 @@
       sec.push(row('金利の変化あり', `月々は変化のあとの最大の額${V.rate.unpaidEnd > 0 ? '。未払利息あり' : ''}`, V.rate, mx, b.totalInterest));
     }
     if (ppErr) sec.push(`<tr><td colspan="6" style="text-align:left;font-family:var(--f-ui);color:var(--warn)">! ${esc(ppErr)}</td></tr>`);
+    $('cCmpBox').hidden = !sec.length;
     $('cCmp').innerHTML = `<table class="sch"><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${sec.join('')}</tbody></table>` +
       '<p class="hint">金額は円。「差」は各まとまりの最初の行と比べた利息の差です。</p>';
     // コピー用：要点と比較
@@ -362,26 +388,36 @@
   // ================= 金利の比較 =================
   const rCopy = [];
   function renderRates() {
-    const { o, bad } = read();
+    const { o, bad, rev } = read();
     rCopy.length = 0;
     $('rNote').innerHTML = `金利は ${esc(LC.RATES_CHECKED)} に出典のページで確かめた値です。実際の金利は審査・借入日・申込方法・車種で変わります。最新の値は出典のページで確かめてください。行を押すと、その金利の下限で「計算」タブを開きます。`;
     if (bad.size) { $('rCond').textContent = ''; $('rTable').innerHTML = '<div class="msg err">× 「計算」タブの赤い欄の値を確かめてください。</div>'; return; }
     const cond = Object.assign(baseOf(o), {});
+    const princ = o.method === 'principal';
+    const opts = `${o.n} 回${o.balloon > 0 ? `・残価 ${yen(o.balloon)} 円` : ''}${o.bonus.mode !== 'none' ? '・ボーナス併用' : ''}・${princ ? '元金均等' : '元利均等'}`;
     $('rTitle').textContent = '金利の比較';
-    $('rCond').textContent = `今の条件（借入 ${yen(o.P)} 円・${o.n} 回${o.balloon > 0 ? `・残価 ${yen(o.balloon)} 円` : ''}${o.bonus.mode !== 'none' ? '・ボーナス併用' : ''}・${o.method === 'principal' ? '元金均等' : '元利均等'}）で、各社の金利の下限と上限のときの月々の支払額と利息の合計です。`;
-    const sim = apr => LC.simulate(Object.assign({}, cond, { apr }));
-    const pick = r => o.method === 'principal' ? r.firstPay : r.A;
-    const cur = sim(o.apr);
-    const head = ['', '金利 %', '月々（下限）', '利息（下限）', '月々（上限）', '利息（上限）'];
-    rCopy.push(['会社・商品', '種類', '金利 下限 %', '金利 上限 %', '月々（下限）', '利息（下限）', '月々（上限）', '利息（上限）', '出典', 'URL']);
-    let body = `<tr class="cur"><th>今の入力<small>${esc(st.c.preset ? (findPreset(st.c.preset) || {}).name || '' : '直接入れた金利')}</small></th><td>${pct(o.apr)}</td><td>${yen(pick(cur))}</td><td>${yen(cur.totalInterest)}</td><td>―</td><td>―</td></tr>`;
+    // 借入額 → 月々：各金利の月々と利息。月々 → 借入額：各金利で借りられる額と、それを借りたときの利息
+    let val, cols;
+    if (rev) {
+      $('rCond').textContent = `今の条件（月々 ${yen(o.target)} 円まで・${opts}）で、各社の金利の下限と上限のときに借りられる額と利息の合計です。`;
+      cols = ['借りられる額', '利息'];
+      val = apr => { const m = LC.maxPrincipal(Object.assign({}, cond, { apr, P: 1 }), o.target); if (m.errors.length) return { a: NaN, i: NaN }; const r = LC.simulate(Object.assign({}, cond, { apr, P: m.P })); return { a: m.P, i: r.totalInterest }; };
+    } else {
+      $('rCond').textContent = `今の条件（借入 ${yen(o.P)} 円・${opts}）で、各社の金利の下限と上限のときの月々の支払額と利息の合計です。`;
+      cols = [princ ? '初回' : '月々', '利息'];
+      val = apr => { const r = LC.simulate(Object.assign({}, cond, { apr })); return r.errors.length ? { a: NaN, i: NaN } : { a: princ ? r.firstPay : r.A, i: r.totalInterest }; };
+    }
+    const cur = val(o.apr);
+    const head = ['', '金利 %', `${cols[0]}（下限）`, `${cols[1]}（下限）`, `${cols[0]}（上限）`, `${cols[1]}（上限）`];
+    rCopy.push(['会社・商品', '種類', '金利 下限 %', '金利 上限 %', ...head.slice(2), '出典', 'URL']);
+    let body = `<tr class="cur"><th>今の入力<small>${esc(st.c.preset ? (findPreset(st.c.preset) || {}).name || '' : '直接入れた金利')}</small></th><td>${pct(o.apr)}</td><td>${yen(cur.a)}</td><td>${yen(cur.i)}</td><td>―</td><td>―</td></tr>`;
     Object.entries(GROUPS).forEach(([g, t]) => {
       body += `<tr class="grp"><th colspan="6">${esc(t)}</th></tr>`;
       LC.PRESETS.filter(p => p.group === g).forEach(p => {
-        const lo = sim(p.lo), hi = p.hi > p.lo ? sim(p.hi) : null;
+        const lo = val(p.lo), hi = p.hi > p.lo ? val(p.hi) : null;
         body += `<tr data-id="${esc(p.id)}"${st.c.preset === p.id ? ' class="cur"' : ''}><th>${esc(p.name)}<span class="tag">${esc(p.type)}</span>${p.official ? '' : '<span class="tag sec">二次情報</span>'}<small>${esc(p.note)}。<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.src)}</a></small></th>` +
-          `<td>${pct(p.lo)}${hi ? `〜${pct(p.hi)}` : ''}</td><td>${yen(pick(lo))}</td><td>${yen(lo.totalInterest)}</td><td>${hi ? yen(pick(hi)) : '―'}</td><td>${hi ? yen(hi.totalInterest) : '―'}</td></tr>`;
-        rCopy.push([p.name, p.type, +(p.lo * 100).toFixed(4), +(p.hi * 100).toFixed(4), Math.round(pick(lo)), Math.round(lo.totalInterest), hi ? Math.round(pick(hi)) : '', hi ? Math.round(hi.totalInterest) : '', p.src, p.url]);
+          `<td>${pct(p.lo)}${hi ? `〜${pct(p.hi)}` : ''}</td><td>${yen(lo.a)}</td><td>${yen(lo.i)}</td><td>${hi ? yen(hi.a) : '―'}</td><td>${hi ? yen(hi.i) : '―'}</td></tr>`;
+        rCopy.push([p.name, p.type, +(p.lo * 100).toFixed(4), +(p.hi * 100).toFixed(4), Math.round(lo.a), Math.round(lo.i), hi ? Math.round(hi.a) : '', hi ? Math.round(hi.i) : '', p.src, p.url]);
       });
     });
     $('rTable').innerHTML = `<table class="pr"><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>`;
