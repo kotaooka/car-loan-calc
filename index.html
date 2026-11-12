@@ -290,7 +290,7 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
                 <div class="seg" id="cBinc" role="group" aria-label="ボーナス月の月額"><button type="button" data-v="add" aria-pressed="true">払う</button><button type="button" data-v="total" aria-pressed="false">払わない</button></div></div>
               <div class="field wide" data-b="share"><label for="cBshare">借入額のうちボーナスで返す分 [円]</label><input type="text" id="cBshare" inputmode="numeric"></div>
               <div class="field" data-b="any"><label for="cBm1">ボーナス月</label><select id="cBm1" class="ui"></select></div>
-              <div class="field" data-b="any"><label for="cBm2">&nbsp;</label><select id="cBm2" class="ui" aria-label="ボーナス月（2 つ目）"></select></div>
+              <div class="field" data-b="any"><label for="cBm2">&nbsp;</label><select id="cBm2" class="ui" aria-label="ボーナス月（2つ目）"></select></div>
             </div>
             <p class="hint" id="cBnote"></p>
           </div>
@@ -301,11 +301,11 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
               <div class="field wide"><span class="lab">返済方式</span>
                 <div class="seg" id="cMethod" role="group" aria-label="返済方式"><button type="button" data-v="level" aria-pressed="true">元利均等</button><button type="button" data-v="principal" aria-pressed="false">元金均等</button></div></div>
               <div class="field"><label for="cFirst">初回の支払月</label><select id="cFirst" class="ui"></select></div>
-              <div class="field"><label for="cUnit">月額の単位</label><select id="cUnit" class="ui"><option value="1">1 円</option><option value="10">10 円</option><option value="100">100 円</option><option value="1000">1,000 円</option></select></div>
+              <div class="field"><label for="cUnit">月額の単位</label><select id="cUnit" class="ui"><option value="1">1円</option><option value="10">10円</option><option value="100">100円</option><option value="1000">1,000円</option></select></div>
               <div class="field wide"><span class="lab">切り捨てた端数を払う回</span>
                 <div class="seg" id="cAdj" role="group" aria-label="端数を払う回"><button type="button" data-v="first" aria-pressed="false">初回</button><button type="button" data-v="last" aria-pressed="true">最後</button></div></div>
             </div>
-            <p class="hint">銀行は 1 円単位で最後、ディーラーは 100 円単位で初回か最後に端数をまとめることが多いです。</p>
+            <p class="hint">銀行は1円単位で最後、ディーラーは100円単位で初回か最後に端数をまとめることが多いです。</p>
           </div>
         </details>
         <details class="opt" id="cPpBox"><summary>繰上げ返済<small id="sPp"></small></summary>
@@ -321,7 +321,7 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
           <div class="inner">
             <div class="rc" id="cRc"></div>
             <div class="field"><span class="lab">変わったときの返済額</span>
-              <div class="seg" id="cRule" role="group" aria-label="金利が変わったときの返済額"><button type="button" data-v="recalc" aria-pressed="true">その都度計算し直す</button><button type="button" data-v="5y125" aria-pressed="false">5 年ルール</button></div></div>
+              <div class="seg" id="cRule" role="group" aria-label="金利が変わったときの返済額"><button type="button" data-v="recalc" aria-pressed="true">その都度計算し直す</button><button type="button" data-v="5y125" aria-pressed="false">5年ルール</button></div></div>
             <p class="hint" id="cRuleNote"></p>
           </div>
         </details>
@@ -348,7 +348,7 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
         <h2>比べる</h2>
         <div class="scroll" id="cCmp"></div>
       </div>
-      <div class="row"><button class="btn" type="button" id="cCopy">結果をコピー（Excel 用）</button></div>
+      <div class="row"><button class="btn" type="button" id="cCopy">結果をコピー（Excel用）</button></div>
     </div>
   </section>
 
@@ -360,7 +360,7 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
         <p class="hint" id="rCond"></p>
         <div class="scroll" id="rTable"></div>
         <p class="hint" id="rNote"></p>
-        <div class="row"><button class="btn" type="button" id="rCopy">表をコピー（Excel 用）</button></div>
+        <div class="row"><button class="btn" type="button" id="rCopy">表をコピー（Excel用）</button></div>
       </div>
     </div>
   </section>
@@ -373,12 +373,12 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
         <div class="kpi" id="tKpi"></div>
         <div class="sch-wrap" id="tTable"></div>
         <p class="hint">色の付いた行はボーナス月です。金額の色が違う回は、端数を払う回（または最終回）です。緑の行は繰上げ返済をした回です。</p>
-        <div class="row"><button class="btn" type="button" id="tCopy">表をコピー（Excel 用）</button></div>
+        <div class="row"><button class="btn" type="button" id="tCopy">表をコピー（Excel用）</button></div>
       </div>
     </div>
   </section>
 
-  <!-- ===== 解説（docs/explanation.md から tools/build.py で埋め込む） ===== -->
+  <!-- ===== 解説（docs/explanation.mdからtools/build.pyで埋め込む） ===== -->
   <section id="explainPanel" hidden>
     <div class="box explain">
 <!--EXPLAIN-START-->
@@ -387,8 +387,8 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
 <h2>計算の約束</h2>
 <ul>
 <li>月利は <strong>実質年率 ÷ 12</strong> です。銀行のローンも、信販会社・ディーラーのローンの「実質年率」も、この月利で毎月の残高に利息をかける形で表示されています</li>
-<li>毎回の利息は <strong>1 円未満切捨て</strong> です</li>
-<li>月額は選んだ単位（1・10・100・1,000 円）の未満を切り捨て、切り捨てた分は「端数を払う回」（初回か最後）でまとめて払います</li>
+<li>毎回の利息は <strong>1円未満切捨て</strong> です</li>
+<li>月額は選んだ単位（1・10・100・1,000円）の未満を切り捨て、切り捨てた分は「端数を払う回」（初回か最後）でまとめて払います</li>
 <li>初回の支払は、借りた月の翌月とみなします（借入日から初回までの日割りの利息は計算しません）</li>
 </ul>
 <h3>元利均等</h3>
@@ -406,12 +406,12 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
 <pre><code>月額 A = (P − B ÷ (1 + r)^n) × r ÷ (1 − (1 + r)^−(n−1))
 </code></pre>
 <ul>
-<li>B：最終回に払う額（残価）。1〜n−1 回目に月額を払い、n 回目に B を払います</li>
+<li>B：最終回に払う額（残価）。1〜n−1回目に月額を払い、n回目にBを払います</li>
 <li><strong>残価にも最後まで利息がかかります</strong>。同じ金利・回数なら、残価を据え置かないより利息の合計は多くなります（「比べる」で差を出します）</li>
 <li>最終回は、残価を払う・車を返す・乗り換えるのどれかで精算します。返すときは走行距離や傷の条件があり、満たさないと追加の支払が出ます</li>
 </ul>
 <h2>ボーナス併用</h2>
-<p>2 つの形を選べます。</p>
+<p>2つの形を選べます。</p>
 <table>
 <thead>
 <tr>
@@ -429,13 +429,13 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
 <tr>
 <td>元金の一部を回す</td>
 <td>銀行</td>
-<td>借入額のうちボーナス返済分を、ボーナス月だけで返す均等額にする。ボーナス分の利息は、前のボーナス月からの月数で月割り（単利）。多くの銀行は借入額の 50% まで</td>
+<td>借入額のうちボーナス返済分を、ボーナス月だけで返す均等額にする。ボーナス分の利息は、前のボーナス月からの月数で月割り（単利）。多くの銀行は借入額の50%まで</td>
 </tr>
 </tbody>
 </table>
 <p>ボーナス月は初回の支払月から数えて決まります。据置があるときは、最終回にはボーナスを足しません。</p>
 <h2>公表されている支払例との一致</h2>
-<p>マツダの公式サイトの支払例（マツダスカイプラン、令和 8 年 10 月時点）は、次の条件で 1 円単位まで同じ値になります。「例を入れる」でこの条件を入れられます。</p>
+<p>マツダの公式サイトの支払例（マツダスカイプラン、令和8年10月時点）は、次の条件で1円単位まで同じ値になります。「例を入れる」でこの条件を入れられます。</p>
 <table>
 <thead>
 <tr>
@@ -447,27 +447,27 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
 <tbody>
 <tr>
 <td>条件</td>
-<td>CX-30・元金 2,572,481 円・5.40%・37 回・初回 2 月・ボーナス月 7 月と 12 月に 100,000 円（月額の代わり）・残価 1,740,000 円</td>
+<td>CX-30・元金2,572,481円・5.40%・37回・初回2月・ボーナス月7月と12月に100,000円（月額の代わり）・残価1,740,000円</td>
 <td>同じ</td>
 </tr>
 <tr>
-<td>月々（100 円未満切捨て）</td>
-<td>19,900 円 × 29 回</td>
-<td>19,900 円</td>
+<td>月々（100円未満切捨て）</td>
+<td>19,900円 × 29回</td>
+<td>19,900円</td>
 </tr>
 <tr>
-<td>最終回 1 回前（端数の調整）</td>
-<td>19,883 円</td>
-<td>19,883 円</td>
+<td>最終回1回前（端数の調整）</td>
+<td>19,883円</td>
+<td>19,883円</td>
 </tr>
 <tr>
 <td>分割支払金合計</td>
-<td>2,936,983 円</td>
-<td>2,936,983 円</td>
+<td>2,936,983円</td>
+<td>2,936,983円</td>
 </tr>
 </tbody>
 </table>
-<p>ほかの公表例との照合と差は、README の「計算の検証」に書いています。</p>
+<p>ほかの公表例との照合と差は、READMEの「計算の検証」に書いています。</p>
 <h2>端数の扱い</h2>
 <table>
 <thead>
@@ -479,31 +479,31 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
 </thead>
 <tbody>
 <tr>
-<td>最後（最終回、残価があるときは最終回の 1 回前）</td>
+<td>最後（最終回、残価があるときは最終回の1回前）</td>
 <td>銀行、マツダ・日産の支払例</td>
-<td>月額 19,900 円、最終回 1 回前 19,883 円</td>
+<td>月額19,900円、最終回1回前19,883円</td>
 </tr>
 <tr>
 <td>初回</td>
 <td>ホンダの支払例、信販会社</td>
-<td>初回 16,138 円、2 回目以降 11,300 円</td>
+<td>初回16,138円、2回目以降11,300円</td>
 </tr>
 </tbody>
 </table>
-<p>調整する回の額は、その後の支払で残高がちょうど 0 になる（残価があるときは最終回がちょうど残価になる）ように、契約時の金利で逆算しています。</p>
+<p>調整する回の額は、その後の支払で残高がちょうど0になる（残価があるときは最終回がちょうど残価になる）ように、契約時の金利で逆算しています。</p>
 <h2>月々の支払額から逆算</h2>
 <p>計算の向きを「月々 → 借入額」にして「払える月々の額」を入れると、その月額で借りられる額の上限と、頭金を足した支払う額（車両・諸費用）の上限を出します。金利・回数・初回の月・残価・ボーナス・端数の扱いは、ほかの欄の値を使います。返済額・図・返済表は、この上限を借りたときの値です。</p>
 <ul>
 <li>比べるのは単位未満を切り捨てた月額（見積書の「月々○円」）です。元金均等では初回の額で比べます</li>
-<li>切り捨てた端数は端数を払う回にまとまるので、その回の額も表示します。100 円単位では、その回が月額より数千円多くなることがあります</li>
-<li>月額は借入額に対して増える一方なので、上限は 1 円単位まで探して求めています（式で解くと、月額の切捨てと端数の調整を含められないため）</li>
-<li>「回数を変えたときの上限」で、24〜120 回の上限も並べます。回数を延ばすと借りられる額は増えますが、利息の合計も増えます</li>
+<li>切り捨てた端数は端数を払う回にまとまるので、その回の額も表示します。100円単位では、その回が月額より数千円多くなることがあります</li>
+<li>月額は借入額に対して増える一方なので、上限は1円単位まで探して求めています（式で解くと、月額の切捨てと端数の調整を含められないため）</li>
+<li>「回数を変えたときの上限」で、24〜120回の上限も並べます。回数を延ばすと借りられる額は増えますが、利息の合計も増えます</li>
 <li>残価やボーナス月の額を決めているときは、それらを払ったうえで月額がこの額になる上限です</li>
 </ul>
 <h2>繰上げ返済</h2>
 <p>指定した回の支払のあとに、指定した額を元金に充てます。</p>
 <ul>
-<li><strong>期間短縮</strong>：月額はそのまま。残高が早く 0 になり、回数が減ります。利息の減り方が大きいのはこちらです</li>
+<li><strong>期間短縮</strong>：月額はそのまま。残高が早く0になり、回数が減ります。利息の減り方が大きいのはこちらです</li>
 <li><strong>返済額軽減</strong>：回数はそのまま。残りの元金を残りの回数で返す額に下がります</li>
 </ul>
 <p>注意：</p>
@@ -513,7 +513,7 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
 <li>残価（据置）があるローンの一部繰上げ返済は、会社ごとに扱いが違うため計算しません</li>
 </ul>
 <h2>金利の変化（変動金利）</h2>
-<p>銀行のマイカーローンの多くは変動金利です。年 2 回（4 月 1 日・10 月 1 日など）金利が見直されます。「変わる回」には、新しい金利で利息を計算する最初の回を入れてください（三菱UFJ銀行の場合、4 月の見直しは 7 月の返済分から）。</p>
+<p>銀行のマイカーローンの多くは変動金利です。年2回（4月1日・10月1日など）金利が見直されます。「変わる回」には、新しい金利で利息を計算する最初の回を入れてください（三菱UFJ銀行の場合、4月の見直しは7月の返済分から）。</p>
 <table>
 <thead>
 <tr>
@@ -527,18 +527,18 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
 <td>金利が変わった回から、残りの元金を残りの回数で返す額に出し直します</td>
 </tr>
 <tr>
-<td>5 年ルール・125% ルール</td>
-<td>金利が変わっても 60 回（5 年）は返済額が変わらず、元金と利息の内訳だけが変わります。61 回目に出し直し、その後は金利が変わるたびに出し直します。増えるときは前の 1.25 倍までです。利息が返済額を超えると、払いきれない利息（未払利息）は次の回に繰り越し、最後に残った元金と利息は最終回にまとめて払います</td>
+<td>5年ルール・125%ルール</td>
+<td>金利が変わっても60回（5年）は返済額が変わらず、元金と利息の内訳だけが変わります。61回目に出し直し、その後は金利が変わるたびに出し直します。増えるときは前の1.25倍までです。利息が返済額を超えると、払いきれない利息（未払利息）は次の回に繰り越し、最後に残った元金と利息は最終回にまとめて払います</td>
 </tr>
 </tbody>
 </table>
 <ul>
-<li>三菱UFJ銀行の目的別ローン（変動・元利均等）の説明は 5 年ルール・125% ルールです。「10 月 1 日を 1 回経過するごとに 1 年」と数えるので、実際の 5 年の区切りは初回から 60 回ちょうどではありません。このツールは 60 回で近似しています</li>
+<li>三菱UFJ銀行の目的別ローン（変動・元利均等）の説明は5年ルール・125%ルールです。「10月1日を1回経過するごとに1年」と数えるので、実際の5年の区切りは初回から60回ちょうどではありません。このツールは60回で近似しています</li>
 <li>三井住友銀行のマイカーローンは、金利の見直しに合わせて新しい金利で返済額を計算し直します（その都度計算し直す形）</li>
 <li>返済額の決め方は銀行ごとに違います。契約書や商品概要説明書で確かめてください</li>
 </ul>
 <h2>金利の例について</h2>
-<p>「金利の例」と「金利の比較」タブの値は、確認日（README とツールに表示）に出典のページで確かめた値です。</p>
+<p>「金利の例」と「金利の比較」タブの値は、確認日（READMEとツールに表示）に出典のページで確かめた値です。</p>
 <ul>
 <li><strong>ジャックス・オリコなど信販会社は、オートローンの金利を公表していません</strong>。販売店との契約とキャンペーンで決まり、販売店の見積書に「実質年率」として書かれます。このツールでは、相場の目安（二次情報）と、販売店が掲載していたキャンペーンの例だけを載せています</li>
 <li>メーカー系（マツダ・ホンダ・日産）は、公式サイトの支払例の実質年率です。販売店や時期で違います</li>
@@ -547,7 +547,7 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
 </ul>
 <h2>計算していないこと</h2>
 <ul>
-<li><strong>借入日から初回の支払日までの日割りの利息</strong>：初回を借入の翌月とみなしています。実際は初回が 2 か月後になることがあり、その分の利息が初回に加わります</li>
+<li><strong>借入日から初回の支払日までの日割りの利息</strong>：初回を借入の翌月とみなしています。実際は初回が2か月後になることがあり、その分の利息が初回に加わります</li>
 <li><strong>手数料・保証料</strong>：事務手数料、所有権留保の手数料、銀行の保証料（多くは金利に含まれる）、繰上げ返済の手数料</li>
 <li><strong>銀行のボーナス返済の初回</strong>：初回ボーナスまでの月数は銀行と契約日で違います。このツールは、初回の支払月から数えた最初のボーナス月にしています</li>
 <li><strong>残価の精算</strong>：車を返すときの査定・追加の支払、乗り換えるときの下取り</li>

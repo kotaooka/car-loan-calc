@@ -21,18 +21,18 @@
   function check(o) {
     const e = [];
     const B = o.balloon || 0, b = o.bonus || { mode: 'none' };
-    if (!(o.P > 0)) e.push('借入額は 0 より大きい値を入れてください。');
-    if (!(o.apr >= 0 && o.apr < 0.3)) e.push('金利は 0% 以上 30% 未満で入れてください。');
-    if (!(Number.isInteger(o.n) && o.n >= 2 && o.n <= 600)) e.push('支払回数は 2〜600 回の整数で入れてください。');
+    if (!(o.P > 0)) e.push('借入額は0より大きい値を入れてください。');
+    if (!(o.apr >= 0 && o.apr < 0.3)) e.push('金利は0%以上30%未満で入れてください。');
+    if (!(Number.isInteger(o.n) && o.n >= 2 && o.n <= 600)) e.push('支払回数は2〜600回の整数で入れてください。');
     if (!(o.first >= 1 && o.first <= 12)) e.push('初回の支払月を選んでください。');
-    if (B < 0 || (o.P > 0 && B >= o.P)) e.push('据置額（残価）は 0 以上で、借入額より小さい値にしてください。');
-    if (b.mode !== 'none' && (!b.months || b.months.length !== 2 || b.months[0] === b.months[1])) e.push('ボーナス月を 2 つ選んでください。');
+    if (B < 0 || (o.P > 0 && B >= o.P)) e.push('据置額（残価）は0以上で、借入額より小さい値にしてください。');
+    if (b.mode !== 'none' && (!b.months || b.months.length !== 2 || b.months[0] === b.months[1])) e.push('ボーナス月を2つ選んでください。');
     if (b.mode === 'amount' && !(b.amount > 0)) e.push('ボーナス月の額を入れてください。');
-    if (b.mode === 'share' && !(b.share > 0 && b.share < o.P - B)) e.push('ボーナス返済分は 0 より大きく、借入額から据置額を引いた額より小さくしてください。');
+    if (b.mode === 'share' && !(b.share > 0 && b.share < o.P - B)) e.push('ボーナス返済分は0より大きく、借入額から据置額を引いた額より小さくしてください。');
     if (o.method === 'principal' && (B > 0 || b.mode !== 'none')) e.push('元金均等では据置（残価）とボーナス併用は使えません。');
-    for (const c of o.rateChanges || []) if (!(c.k >= 2 && c.k <= o.n && c.apr >= 0 && c.apr < 0.3)) { e.push('金利の変化は 2 回目以降・30% 未満で入れてください。'); break; }
+    for (const c of o.rateChanges || []) if (!(c.k >= 2 && c.k <= o.n && c.apr >= 0 && c.apr < 0.3)) { e.push('金利の変化は2回目以降・30%未満で入れてください。'); break; }
     const p = o.prepay;
-    if (p && p.amount > 0 && !(p.k >= 1 && p.k < o.n)) e.push('繰上げ返済の回は 1〜最終回の前で入れてください。');
+    if (p && p.amount > 0 && !(p.k >= 1 && p.k < o.n)) e.push('繰上げ返済の回は1〜最終回の前で入れてください。');
     return e;
   }
 
@@ -272,7 +272,7 @@
   // 比べるのは単位未満を切り捨てた月額（広告や見積書の「月々○円」と同じ）。切り捨てた端数は調整の回で払うので、その回の額も返す。
   // 月額は借入額に対して増える一方なので、倍々で上限を見つけてから 2 分法で 1 円まで詰める
   function maxPrincipal(o, target) {
-    if (!(target > 0)) return { errors: ['月々の支払額は 0 より大きい値を入れてください。'] };
+    if (!(target > 0)) return { errors: ['月々の支払額は0より大きい値を入れてください。'] };
     const base = Object.assign({}, o, { prepay: null, rateChanges: [] });
     // 月額がマイナスになる小さい借入額は、どの目標より小さいとみなす
     const pay = P => { const r = simulate(Object.assign({}, base, { P })); return r.negative ? -Infinity : r.errors.length ? Infinity : (o.method === 'principal' ? r.firstPay : r.A); };
