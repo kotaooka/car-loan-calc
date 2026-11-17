@@ -477,7 +477,7 @@
   $('rCopy').addEventListener('click', () => copyRows(rCopy));
   $('tCopy').addEventListener('click', () => copyRows(tCopy));
 
-  // ---- テーマ（QC Workbench の全ツールで共通のキー） ----
+  // ---- テーマ（kotaooka.github.io の各ツールで共通のキー） ----
   const THEMES = ['auto', 'light', 'dark'], THEME_LABEL = { auto: '表示：自動', light: '表示：ライト', dark: '表示：ダーク' }, THEME_KEY = 'qc-workbench-theme';
   const readTheme = () => { try { const t = localStorage.getItem(THEME_KEY); return THEMES.includes(t) ? t : 'auto'; } catch (e) { return 'auto'; } };
   let theme = readTheme();

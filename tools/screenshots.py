@@ -60,8 +60,8 @@ with sync_playwright() as p:
     route_fonts(o)
     o.set_content(f"""<html><head><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@500"></head>
       <body style="margin:0;width:1200px;height:630px;background:linear-gradient(#1d5c96,#1a5388);font-family:'BIZ UDPGothic';color:#fff;display:flex;align-items:center;gap:40px;padding:0 64px;box-sizing:border-box;{vars_css}">
-      <div style="flex:0 0 400px"><div style="font-size:26px;opacity:.85">QC Workbench</div>
-      <div style="font-size:52px;font-weight:700;line-height:1.25;margin:14px 0 22px">自動車ローン<br>計算機</div>
+      <div style="flex:0 0 400px">
+      <div style="font-size:52px;font-weight:700;line-height:1.25;margin:0 0 22px">自動車ローン<br>計算機</div>
       <div style="font-size:24px;line-height:1.6;opacity:.92">月々の支払額と利息を、残価・<br>ボーナス・繰上げ返済で比べる</div></div>
       <div style="flex:1;background:#fff;border-radius:16px;padding:14px">{svg}</div></body></html>""")
     o.wait_for_load_state('networkidle'); o.evaluate("document.fonts.ready"); o.wait_for_timeout(300)

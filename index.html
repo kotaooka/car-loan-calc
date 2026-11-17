@@ -7,7 +7,6 @@
 <meta name="description" content="自動車ローンの毎月の返済額と利息を求める。残価設定（据置）、ボーナス併用、端数の調整、繰上げ返済（期間短縮・返済額軽減）、変動金利の上昇（5年ルール・125%ルール）、銀行・ディーラーの金利の比較にも対応">
 <link rel="canonical" href="https://kotaooka.github.io/car-loan-calc/">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="QC Workbench">
 <meta property="og:title" content="自動車ローン返済計算ツール｜残価設定・ボーナス・繰上げ返済">
 <meta property="og:description" content="自動車ローンの毎月の返済額と利息を求める。残価設定（据置）、ボーナス併用、端数の調整、繰上げ返済（期間短縮・返済額軽減）、変動金利の上昇（5年ルール・125%ルール）、銀行・ディーラーの金利の比較にも対応">
 <meta property="og:url" content="https://kotaooka.github.io/car-loan-calc/">
@@ -27,11 +26,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@500&display=swap">
 <script>
-  // 保存したテーマ（auto / light / dark）を描画前に当てる。キーは QC Workbench の全ツールで共通
+  // 保存したテーマ（auto / light / dark）を描画前に当てる。キーは kotaooka.github.io の各ツールで共通
   try { const t = localStorage.getItem("qc-workbench-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) { /* 保存できない環境 */ }
 </script>
 <style>
-/* 字体・配色は QC Workbench の各ツールと共通（DESIGN.md）。レイアウト：左に入力、右に図・結果。狭い画面では縦に積む */
+/* 字体・配色は kotaooka.github.io の各ツールと共通（DESIGN.md）。レイアウト：左に入力、右に図・結果。狭い画面では縦に積む */
 :root {
   --bg: #eef1f4;
   --surface: #ffffff;
@@ -74,9 +73,6 @@ header.top { position: sticky; top: 0; z-index: 5; background: var(--bg); border
 .brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .brand h1 { font-size: 1.15rem; margin: 0; letter-spacing: .02em; }
 .brand .std { font-size: .78rem; color: var(--muted); }
-.brand .home { font-size: .78rem; color: var(--muted); text-decoration: none; margin-right: -6px; }
-.brand .home:hover { color: var(--accent); text-decoration: underline; }
-.brand .crumb { font-size: .78rem; color: var(--muted); margin-right: -6px; }
 .brand .theme { margin-left: auto; }
 nav.tabs { display: flex; gap: 4px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; }
 nav.tabs::-webkit-scrollbar { display: none; }
@@ -246,7 +242,7 @@ details.opt .inner { display: flex; flex-direction: column; gap: 12px; }
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <a class="home" href="https://kotaooka.github.io/" title="QC Workbench（ツール一覧）へ戻る">QC Workbench</a><span class="crumb" aria-hidden="true">›</span><h1>自動車ローン計算機</h1>
+      <h1>自動車ローン計算機</h1>
       <span class="std">元利均等 / 残価設定 / 繰上げ返済</span>
       <button class="btn theme" id="themeBtn" type="button" aria-label="表示テーマを切り替え">表示：自動</button>
     </div>

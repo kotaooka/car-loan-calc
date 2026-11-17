@@ -1,6 +1,6 @@
 // 自動車ローン計算機の Service Worker
 // 公開ファイルを更新したら VERSION を上げる。古いキャッシュは activate 時に削除される
-const VERSION = 'v1.2.1';
+const VERSION = 'v1.2.2';
 const APP_CACHE = `car-loan-calc-${VERSION}`;
 const FONT_CACHE = 'car-loan-calc-fonts';
 
